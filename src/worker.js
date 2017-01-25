@@ -179,7 +179,7 @@ self.addEventListener('message', function(event) {
 				return o;
 			}, function (err) {
 				console.log(err);
-				const o = {};
+				const o = {id};
 				if (err) {
 					o.error = err.message ? err.message : err;
 				}
