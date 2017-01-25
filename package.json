@@ -1,0 +1,24 @@
+{
+  "name": "aframe-verlet-worker-component",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "webpack --optimize-minimize",
+    "build:dev": "webpack --watch"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "babel-core": "^6.22.1",
+    "babel-loader": "^6.2.10",
+    "babel-preset-es2017": "^6.22.0",
+    "gl-vec3": "^1.0.3",
+    "verlet-constraint": "^1.1.0",
+    "verlet-point": "^1.2.1",
+    "verlet-system": "^1.0.15"
+  },
+  "devDependencies": {
+    "webpack": "^1.14.0"
+  }
+}
