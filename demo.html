@@ -14,9 +14,11 @@
 	</head>
 	<body>
 		<a-scene>
-			<a-entity verlet-container position="0 0 -5">
-				<a-box verlet-point color="skyblue"></a-box>
-				<a-box verlet-point="mass:0;" position="0 2 0" color="maroon"></a-box>
+			<a-entity verlet-container="floor: 0;" position="0 0 -5">
+				<a-box id="p1" verlet-point color="skyblue" position="0 3 0"></a-box>
+				<a-box id="p2" verlet-point="mass:2;position: 0 2 0; velocity: 0.1 0.1 -0.1;" color="maroon"></a-box>
+				<a-box id="myAnchor" verlet-point="mass: 0;" verlet-constraint="to: #p1, #p2; stiffness: 0.1; distance: 2;" color="green"  position="0 5 0"></a-box>
+				<!--<a-constraint from="p1" to="p2" stiffness="0.5"></a-constraint>-->
 			</a-entity>
 		</a-scene>
 	</body>

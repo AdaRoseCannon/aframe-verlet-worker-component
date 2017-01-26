@@ -1,4 +1,4 @@
-/* eslint-env es6, worker */
+/* eslint-env commonjs, worker, es6 */
 /* eslint no-console: 0 */
 
 'use strict';
@@ -75,18 +75,22 @@ function MyVerlet(options = {}) {
 		return this.constraints.indexOf(c);
 	};
 
-	this.size = options.size || {
-		x: 10,
-		y: 10,
-		z: 10
+	const worldOptions = {
+		gravity: options.gravity ? [0, options.gravity, 0] : undefined,
+		friction: 0.99
 	};
 
-	this.world = new World3D({
-		gravity: options.gravity ? [0, options.gravity, 0] : undefined,
-		min: [-this.size.x/2, -this.size.y/2, -this.size.z/2],
-		max: [this.size.x/2, this.size.y/2, this.size.z/2],
-		friction: 0.99
-	});
+	if (options.boxSize) {
+		worldOptions.min = [-options.size.x / 2, -options.size.y / 2, -options.size.z / 2];
+		worldOptions.min = [options.size.x / 2, options.size.y / 2, options.size.z / 2];
+	}
+
+	if (typeof options.floor === 'number' && options.floor !== -Infinity) {
+		worldOptions.min = [null, options.floor, null];
+		worldOptions.max = [null, null, null];
+	}
+
+	this.world = new World3D(worldOptions);
 
 	let oldT = 0;
 
@@ -143,12 +147,11 @@ self.addEventListener('message', function(event) {
 
 			// don't do anything just return the points
 			case 'noopPoints':
-				console.log(noop);
 				return {id, byteData: i.byteData};
 
 			case 'connectPoints':
-				const p1 = verlet.points[i.options.p1.id];
-				const p2 = verlet.points[i.options.p2.id];
+				const p1 = verlet.points[i.options.id1 - 100];
+				const p2 = verlet.points[i.options.id2 - 100];
 				return {
 					id,
 					constraintId: verlet.connect(p1, p2, i.options.constraintOptions)
@@ -168,7 +171,7 @@ self.addEventListener('message', function(event) {
 
 			case 'updatePoint':
 				const d = i.pointOptions;
-				const p3 = verlet.points[d.id];
+				const p3 = verlet.points[d.id - 100];
 				if (d.position !== undefined) p3.verletPoint.place([d.position.x, d.position.y, d.position.z]);
 				if (d.velocity !== undefined) p3.verletPoint.addForce([d.velocity.x, d.velocity.y, d.velocity.z]);
 				if (d.mass !== undefined) p3.verletPoint.mass = d.mass;

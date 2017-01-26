@@ -1,4 +1,5 @@
 'use strict';
+/* eslint-env commonjs, browser, es6 */
 /* eslint no-console: 0 */
 
 const awaitingResponseQueue = new Map();
@@ -8,7 +9,7 @@ function resolveMessagePromise(event) {
 
 	// Iterate over the responses and resolve/reject accordingly
 	const response = event.data;
-	response.forEach((d, i) => {
+	response.forEach(d => {
 		const waitingMessage = awaitingResponseQueue.get(d.id);
 		awaitingResponseQueue.delete(d.id);
 		delete d.id;
@@ -82,13 +83,11 @@ class Verlet {
 
 			this.myWorker.postMessage(messageToSend, transfer);
 		}
-		requestAnimationFrame(this.process);
 	}
 
 	workerMessage(message) {
 
 		const id = String(Date.now() + Math.floor(Math.random() * 1000000));
-		const verletSystem = this;
 
 		// This wraps the message posting/response in a promise, which will resolve if the response doesn't
 		// contain an error, and reject with the error if it does. If you'd prefer, it's possible to call
@@ -154,8 +153,8 @@ class Verlet {
 		return this.workerMessage({action: 'updatePoint', pointOptions});
 	}
 
-	connectPoints(p1, p2, constraintOptions) {
-		return this.workerMessage({action: 'connectPoints', options: {p1, p2, constraintOptions}});
+	connectPoints(id1, id2, constraintOptions) {
+		return this.workerMessage({action: 'connectPoints', options: {id1, id2, constraintOptions}});
 	}
 
 	updateConstraint(options) {

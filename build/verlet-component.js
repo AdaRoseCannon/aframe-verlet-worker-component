@@ -45,8 +45,9 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
-	/* eslint-env es2017, worker */
+	/* eslint-env commonjs, browser, es6 */
 	/* eslint no-console: 0 */
+	/* global AFRAME */
 
 	let start = (() => {
 		var _ref = _asyncToGenerator(function* (options) {
@@ -70,6 +71,12 @@
 		schema: {
 			gravity: {
 				default: -9.8
+			},
+			boxSize: {
+				default: 0
+			},
+			floor: {
+				default: -Infinity
 			}
 		},
 		init() {
@@ -87,19 +94,91 @@
 				return d.point.id;
 			});
 		},
+		connectPoints(p1, p2, options) {
+			this.systemPromise.then(v => v.connectPoints(p1, p2, options));
+		},
+		updatePoint(id, data) {
+			const inData = { id };
+			Object.assign(inData, data);
+			return this.systemPromise.then(v => v.updatePoint(inData));
+		},
 		tick() {
 			if (!this.v) return;
 			this.v.getPoints().then(this.updatePoints);
+			this.v.process();
 		},
 		updatePoints({ byteData }) {
 			for (let i = 0, l = byteData.length; i < l; i += 4) {
-				const id = byteData[i + 0];
-				if (!id) continue;
+				const point = byteData[i + 0] && this.points.get(byteData[i + 0]);
+				if (!point) continue;
 				const pX = byteData[i + 1];
 				const pY = byteData[i + 2];
 				const pZ = byteData[i + 3];
-				this.points.get(id).setPosition(pX, pY, pZ);
+				point.setPosition(pX, pY, pZ);
 			}
+		}
+	});
+
+	AFRAME.registerComponent('verlet-constraint', {
+		schema: {
+			stiffness: {
+				default: 1
+			},
+			from: {
+				type: 'selectorAll'
+			},
+			to: {
+				type: 'selectorAll'
+			},
+			distance: {
+				default: ''
+			}
+		},
+		init() {
+			let el = this.el;
+			while (el && el.matches && !el.matches('[verlet-container]')) el = el.parentNode;
+			if (el.components['verlet-container']) {
+				this.parentReadyPromise = Promise.resolve(el.components['verlet-container']);
+			} else {
+				this.parentReadyPromise = new Promise(r => el.addEventListener('verlet-container-init-complete', () => r(el.components['verlet-container'])));
+			}
+			this.constraints = new Map();
+		},
+
+		update() {
+			this.data.restingDistance = this.data.distance ? Number(this.data.distance) : undefined;
+			this.parentReadyPromise.then(c => {
+				if (!this.data.from || !this.data.from.length) {
+					if (this.el.matches('[verlet-point]')) {
+						this.data.from = [this.el];
+					} else {
+						this.data.from = [];
+					}
+				}
+
+				if (!this.data.to || !this.data.to.length) {
+					if (this.el.matches('[verlet-point]')) {
+						this.data.to = [this.el];
+					} else {
+						this.data.to = [];
+					}
+				}
+
+				for (const i of this.data.to) {
+					for (const j of this.data.from) {
+						if (i !== j) {
+							if (!i.components['verlet-point'].idPromise) i.updateComponent('verlet-point');
+							if (!j.components['verlet-point'].idPromise) j.updateComponent('verlet-point');
+							Promise.all([this.parentReadyPromise, i.components['verlet-point'].idPromise, j.components['verlet-point'].idPromise]).then(arr => {
+								const verletSystem = arr[0];
+								const id1 = arr[1];
+								const id2 = arr[2];
+								verletSystem.connectPoints(id1, id2, { stiffness: this.data.stiffness, restingDistance: this.data.restingDistance });
+							});
+						}
+					}
+				}
+			});
 		}
 	});
 
@@ -113,19 +192,21 @@
 			},
 			mass: {
 				default: 1
+			},
+			radius: {
+				default: 0
 			}
 		},
 		init() {
 			let el = this.el;
 			while (el && el.matches && !el.matches('[verlet-container]')) el = el.parentNode;
 			if (el.components['verlet-container']) {
-				this.parentReady = Promise.resolve(el.components['verlet-container']);
+				this.parentReadyPromise = Promise.resolve(el.components['verlet-container']);
 			} else {
-				this.parentReady = new Promise(r => el.addEventListener('verlet-container-init-complete', () => r(el.components['verlet-container'])));
+				this.parentReadyPromise = new Promise(r => el.addEventListener('verlet-container-init-complete', () => r(el.components['verlet-container'])));
 			}
-			this.parentReady.then(c => {
+			this.parentReadyPromise.then(c => {
 				this.parentVerletComponent = c;
-				this.update();
 			});
 			this.el.updateComponent('position');
 		},
@@ -138,13 +219,17 @@
 		},
 
 		update() {
-			if (!this.parentVerletComponent) return;
-			this.data.position = this.attrValue.position ? this.data.position : this.el.object3D.position;
-			if (!this.idPromise) {
-				this.idPromise = this.parentVerletComponent.addPoint(this, this.data);
-			} else {
-				this.idPromise.then(id => this.parentVerletComponent.updatePoint(id, this.data));
-			}
+
+			return this.parentReadyPromise.then(c => {
+
+				this.data.position = this.attrValue.position ? this.data.position : this.el.object3D.position;
+				if (!this.idPromise) {
+					this.idPromise = c.addPoint(this, this.data);
+					return this.idPromise;
+				} else {
+					return this.idPromise.then(id => c.updatePoint(id, this.data));
+				}
+			});
 		}
 	});
 
@@ -153,6 +238,7 @@
 /***/ function(module, exports) {
 
 	'use strict';
+	/* eslint-env commonjs, browser, es6 */
 	/* eslint no-console: 0 */
 
 	const awaitingResponseQueue = new Map();
@@ -162,7 +248,7 @@
 
 		// Iterate over the responses and resolve/reject accordingly
 		const response = event.data;
-		response.forEach((d, i) => {
+		response.forEach(d => {
 			const waitingMessage = awaitingResponseQueue.get(d.id);
 			awaitingResponseQueue.delete(d.id);
 			delete d.id;
@@ -236,13 +322,11 @@
 
 				this.myWorker.postMessage(messageToSend, transfer);
 			}
-			requestAnimationFrame(this.process);
 		}
 
 		workerMessage(message) {
 
 			const id = String(Date.now() + Math.floor(Math.random() * 1000000));
-			const verletSystem = this;
 
 			// This wraps the message posting/response in a promise, which will resolve if the response doesn't
 			// contain an error, and reject with the error if it does. If you'd prefer, it's possible to call
@@ -308,8 +392,8 @@
 			return this.workerMessage({ action: 'updatePoint', pointOptions });
 		}
 
-		connectPoints(p1, p2, constraintOptions) {
-			return this.workerMessage({ action: 'connectPoints', options: { p1, p2, constraintOptions } });
+		connectPoints(id1, id2, constraintOptions) {
+			return this.workerMessage({ action: 'connectPoints', options: { id1, id2, constraintOptions } });
 		}
 
 		updateConstraint(options) {
