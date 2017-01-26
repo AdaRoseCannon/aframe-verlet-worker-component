@@ -20,5 +20,13 @@
   },
   "devDependencies": {
     "webpack": "^1.14.0"
+  },
+  "eslintConfig": {
+    "parserOptions": {
+        "ecmaVersion": 2017
+    },
+    "rules": {
+        "semi": 2
+    }
   }
 }

@@ -45,28 +45,17 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
-	/* eslint-env es6, worker */
+	/* eslint-env es2017, worker */
 	/* eslint no-console: 0 */
 
 	let start = (() => {
-		var _ref = _asyncToGenerator(function* () {
-			try {
-				const v = new Verlet();
-				yield v.init();
-				yield v.addPoint({
-					position: {
-						x: 0,
-						y: 0,
-						z: 0
-					}
-				});
-				console.log((yield v.getPoints()));
-			} catch (e) {
-				console.log(e);
-			}
+		var _ref = _asyncToGenerator(function* (options) {
+			const v = new Verlet();
+			yield v.init(options);
+			return v;
 		});
 
-		return function start() {
+		return function start(_x) {
 			return _ref.apply(this, arguments);
 		};
 	})();
@@ -77,20 +66,125 @@
 
 	;
 
-	start();
+	AFRAME.registerComponent('verlet-container', {
+		schema: {
+			gravity: {
+				default: -9.8
+			}
+		},
+		init() {
+			this.systemPromise = start(this.data).then(v => this.v = v);
+			this.systemPromise.then(v => this.el.emit('verlet-container-init-complete', v));
+			this.points = new Map();
+			this.updatePoints = this.updatePoints.bind(this);
+		},
+		update() {
+			// TODO: Update verlet system without restarting worker
+		},
+		addPoint(component, data) {
+			return this.systemPromise.then(v => v.addPoint(data)).then(d => {
+				this.points.set(d.point.id, component);
+				return d.point.id;
+			});
+		},
+		tick() {
+			if (!this.v) return;
+			this.v.getPoints().then(this.updatePoints);
+		},
+		updatePoints({ byteData }) {
+			for (let i = 0, l = byteData.length; i < l; i += 4) {
+				const id = byteData[i + 0];
+				if (!id) continue;
+				const pX = byteData[i + 1];
+				const pY = byteData[i + 2];
+				const pZ = byteData[i + 3];
+				this.points.get(id).setPosition(pX, pY, pZ);
+			}
+		}
+	});
+
+	AFRAME.registerComponent('verlet-point', {
+		schema: {
+			position: {
+				type: 'vec3'
+			},
+			velocity: {
+				type: 'vec3'
+			},
+			mass: {
+				default: 1
+			}
+		},
+		init() {
+			let el = this.el;
+			while (el && el.matches && !el.matches('[verlet-container]')) el = el.parentNode;
+			if (el.components['verlet-container']) {
+				this.parentReady = Promise.resolve(el.components['verlet-container']);
+			} else {
+				this.parentReady = new Promise(r => el.addEventListener('verlet-container-init-complete', () => r(el.components['verlet-container'])));
+			}
+			this.parentReady.then(c => {
+				this.parentVerletComponent = c;
+				this.update();
+			});
+			this.el.updateComponent('position');
+		},
+
+		// for processing data recieved from container
+		setPosition(x, y, z) {
+			this.el.object3D.position.x = x;
+			this.el.object3D.position.y = y;
+			this.el.object3D.position.z = z;
+		},
+
+		update() {
+			if (!this.parentVerletComponent) return;
+			this.data.position = this.attrValue.position ? this.data.position : this.el.object3D.position;
+			if (!this.idPromise) {
+				this.idPromise = this.parentVerletComponent.addPoint(this, this.data);
+			} else {
+				this.idPromise.then(id => this.parentVerletComponent.updatePoint(id, this.data));
+			}
+		}
+	});
 
 /***/ },
 /* 1 */
 /***/ function(module, exports) {
 
 	'use strict';
-	/* eslint-env es6, worker */
 	/* eslint no-console: 0 */
+
+	const awaitingResponseQueue = new Map();
+	const BYTE_DATA_STAND_IN = 'BYTE_DATA_STAND_IN';
+
+	function resolveMessagePromise(event) {
+
+		// Iterate over the responses and resolve/reject accordingly
+		const response = event.data;
+		response.forEach((d, i) => {
+			const waitingMessage = awaitingResponseQueue.get(d.id);
+			awaitingResponseQueue.delete(d.id);
+			delete d.id;
+			if (!d.error) {
+				if (d.byteData) {
+					// console.log('Recieved \'data\' back from worker');
+					this.dataAvailable = true;
+					this.data = new Float32Array(d.byteData);
+					d.byteData = this.data;
+				}
+				waitingMessage.resolve(d);
+			} else {
+				waitingMessage.reject(d.error);
+			}
+		});
+	};
 
 	class Verlet {
 
-		constructor(maxPoints = 50) {
+		constructor(maxPoints = 10) {
 			this.myWorker = new Worker('./build/worker.js');
+			this.myWorker.addEventListener('message', resolveMessagePromise.bind(this));
 			this.messageQueue = [];
 			this.setMaxPoints(maxPoints);
 
@@ -105,35 +199,41 @@
 	  * */
 		setMaxPoints(maxPoints) {
 			this.maxPoints = maxPoints;
-			this.data = new Float32Array(maxPoints * 5);
+			this.data = new Float32Array(maxPoints * 4);
+			this.dataAvailable = true;
 		}
 
 		process() {
+
+			// skip frames if data is being slow
+			if (!this.data) return;
+
 			if (this.messageQueue.length) {
 
-				const extractedMessages = this.messageQueue.splice(0);
+				const transfer = [];
+				const messageToSend = {};
 
-				const messageToSend = extractedMessages.map(i => ({ message: i.message, id: i.id }));
+				const queue = this.messageQueue.splice(0);
+				for (const i of queue) {
+					if (i.message['BYTE_DATA_STAND_IN']) {
+						delete i.message['BYTE_DATA_STAND_IN'];
+						i.message.byteData = this.data.buffer;
 
-				const messageChannel = new MessageChannel();
-				messageChannel.port1.onmessage = function resolveMessagePromise(event) {
-					messageChannel.port1.onmessage = undefined;
-
-					// Iterate over the responses and resolve/reject accordingly
-					const response = event.data;
-					response.forEach((d, i) => {
-						if (extractedMessages[i].id !== d.id) {
-							throw Error('ID Mismatch!!!');
+						if (transfer.indexOf(this.data.buffer) === -1) {
+							transfer.push(this.data.buffer);
 						}
-						if (!d.error) {
-							extractedMessages[i].resolve(d);
-						} else {
-							extractedMessages[i].reject(d.error);
-						}
-					});
+					}
+
+					messageToSend[i.id] = i.message;
+					awaitingResponseQueue.set(i.id, i);
 				};
-				const transfer = [messageChannel.port2];
-				if (messageToSend.byteData) transfer.push(messageToSend.byteData);
+
+				if (transfer.indexOf(this.data.buffer) !== -1) {
+					// console.log('Transfering \'data\' to worker');
+					this.dataAvailable = false;
+					this.data = undefined;
+				}
+
 				this.myWorker.postMessage(messageToSend, transfer);
 			}
 			requestAnimationFrame(this.process);
@@ -141,7 +241,8 @@
 
 		workerMessage(message) {
 
-			const id = Date.now() + Math.floor(Math.random() * 1000000);
+			const id = String(Date.now() + Math.floor(Math.random() * 1000000));
+			const verletSystem = this;
 
 			// This wraps the message posting/response in a promise, which will resolve if the response doesn't
 			// contain an error, and reject with the error if it does. If you'd prefer, it's possible to call
@@ -154,6 +255,13 @@
 					resolve,
 					reject
 				};
+
+				if (message.action === 'getPoints') {
+					for (const o of this.messageQueue) {
+						if (o.message.action === 'getPoints') o.message.action = 'noopPoints';
+					}
+				}
+
 				this.messageQueue.push(data);
 			}.bind(this));
 		}
@@ -171,7 +279,8 @@
 	  * Run the physics System and return the updated points
 	  */
 		getPoints() {
-			return this.workerMessage({ action: 'getPoints', byteData: this.data });
+			// console.log(this.dataAvailable ? 'Data Available' : 'Data Unavailable');
+			return this.workerMessage({ action: 'getPoints', BYTE_DATA_STAND_IN });
 		}
 
 		/**

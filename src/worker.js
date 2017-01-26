@@ -49,7 +49,7 @@ function MyVerlet(options = {}) {
 
 	this.addPoint = options => {
 		const p = new VerletThreePoint(options);
-		p.id = this.points.push(p) - 1;
+		p.id = this.points.push(p) + 99;
 
 		// if a point is attractive add a pulling force
 		this.points.forEach(p0 => {
@@ -82,7 +82,7 @@ function MyVerlet(options = {}) {
 	};
 
 	this.world = new World3D({
-		gravity: options.gravity ? [0, -9.8, 0] : undefined,
+		gravity: options.gravity ? [0, options.gravity, 0] : undefined,
 		min: [-this.size.x/2, -this.size.y/2, -this.size.z/2],
 		max: [this.size.x/2, this.size.y/2, this.size.z/2],
 		friction: 0.99
@@ -98,7 +98,7 @@ function MyVerlet(options = {}) {
 			return;
 		}
 
-		const dT = Math.min(0.032, (t - oldT) / 1000);
+		const dT = Math.min(0.064, (t - oldT) / 1000);
 		const vP = this.points.map(p => p.verletPoint);
 
 		this.constraints.forEach(c => c.solve());
@@ -114,81 +114,79 @@ let verlet;
 // Recieve messages from the client and reply back onthe same port
 self.addEventListener('message', function(event) {
 
-		const data = event.data;
-		Promise.all(data.map(({message, id}) => new Promise(
-			function (resolve) {
-				const i = message;
+	const transfer = [];
+	const data = Object.entries(event.data).map(([id, message]) => {
+		const i = message;
 
-				switch(i.action) {
-					case 'init':
-						verlet = new MyVerlet(i.options);
-						return resolve();
+		switch (i.action) {
+			case 'init':
+				verlet = new MyVerlet(i.options);
+				return { id };
 
-					case 'getPoints':
-						const transfer = i.byteData;
-						verlet.animate();
-						for (let i = 0, l = verlet.points.length; i < l; i++) {
-							const p = verlet.points[i];
-							const j = i * 5;
-							transfer[j + 0] = p.id;
-							transfer[j + 1] = p.verletPoint.radius;
-							transfer[j + 2] = p.verletPoint.position[0];
-							transfer[j + 3] = p.verletPoint.position[1];
-							transfer[j + 4] = p.verletPoint.position[2];
-						}
+			case 'getPoints':
 
-						return resolve({byteData: transfer});
-
-					case 'connectPoints':
-						const p1 = verlet.points[i.options.p1.id];
-						const p2 = verlet.points[i.options.p2.id];
-						return resolve({
-							constraintId: verlet.connect(p1, p2, i.options.constraintOptions)
-						});
-
-					case 'updateConstraint':
-						const c = verlet.constraints[i.options.constraintId];
-						if (i.options.stiffness !== undefined) c.stiffness = i.options.stiffness;
-						if (i.options.restingDistance !== undefined) c.restingDistance = i.options.restingDistance;
-						return resolve();
-
-					case 'addPoint':
-						return resolve({
-							point: verlet.addPoint(i.pointOptions)
-						});
-
-					case 'updatePoint':
-						const d = i.pointOptions;
-						const p3 = verlet.points[d.id];
-						if (d.position !== undefined) p3.verletPoint.place([d.position.x, d.position.y, d.position.z]);
-						if (d.velocity !== undefined) p3.verletPoint.addForce([d.velocity.x, d.velocity.y, d.velocity.z]);
-						if (d.mass !== undefined) p3.verletPoint.mass = d.mass;
-						if (d.radius !== undefined) p3.verletPoint.radius = d.radius;
-						return resolve();
-
-					case 'reset':
-						verlet.points.splice(0);
-						return resolve();
-
-					default:
-						throw Error('Invalid Action');
+				// Use Float32Array to handle the data
+				const byteData = new Float32Array(i.byteData);
+				verlet.animate();
+				for (let i = 0, l = verlet.points.length; i < l; i++) {
+					const p = verlet.points[i];
+					const j = i * 4;
+					byteData[j + 0] = p.id;
+					byteData[j + 1] = p.verletPoint.position[0];
+					byteData[j + 2] = p.verletPoint.position[1];
+					byteData[j + 3] = p.verletPoint.position[2];
 				}
-			})
-			.then(function (o = {}) {
-				o.id = id;
-				return o;
-			}, function (err) {
-				console.log(err);
-				const o = {id};
-				if (err) {
-					o.error = err.message ? err.message : err;
-				}
-				return o;
-			})
-		))
-		.then(function (response) {
 
-			// deliver data by transfering data
-			event.ports[0].postMessage(response, response.byteData ? [response.byteData] : undefined);
-		});
+				transfer.push(byteData.buffer);
+
+				return { id, byteData: byteData.buffer };
+
+			// don't do anything just return the points
+			case 'noopPoints':
+				console.log(noop);
+				return {id, byteData: i.byteData};
+
+			case 'connectPoints':
+				const p1 = verlet.points[i.options.p1.id];
+				const p2 = verlet.points[i.options.p2.id];
+				return {
+					id,
+					constraintId: verlet.connect(p1, p2, i.options.constraintOptions)
+				};
+
+			case 'updateConstraint':
+				const c = verlet.constraints[i.options.constraintId];
+				if (i.options.stiffness !== undefined) c.stiffness = i.options.stiffness;
+				if (i.options.restingDistance !== undefined) c.restingDistance = i.options.restingDistance;
+				return {id};
+
+			case 'addPoint':
+				return {
+					id,
+					point: verlet.addPoint(i.pointOptions)
+				};
+
+			case 'updatePoint':
+				const d = i.pointOptions;
+				const p3 = verlet.points[d.id];
+				if (d.position !== undefined) p3.verletPoint.place([d.position.x, d.position.y, d.position.z]);
+				if (d.velocity !== undefined) p3.verletPoint.addForce([d.velocity.x, d.velocity.y, d.velocity.z]);
+				if (d.mass !== undefined) p3.verletPoint.mass = d.mass;
+				if (d.radius !== undefined) p3.verletPoint.radius = d.radius;
+				return { id };
+
+			case 'reset':
+				verlet.points.splice(0);
+				return { id };
+
+			default:
+				return {
+					error: 'Invalid Action',
+					id
+				};
+		}
+	});
+
+	// deliver data by transfering data
+	self.postMessage(data, transfer);
 });

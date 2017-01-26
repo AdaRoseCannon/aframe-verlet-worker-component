@@ -9,8 +9,15 @@
 		<title>AFrame Verlet Demo</title>
 		<meta name="description" content="">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
+ 		<script src="https://aframe.io/releases/0.4.0/aframe.min.js"></script>
+		<script src="build/verlet-component.js"></script>
 	</head>
 	<body>
-		<script src="./build/verlet-component.js"></script>
+		<a-scene>
+			<a-entity verlet-container position="0 0 -5">
+				<a-box verlet-point color="skyblue"></a-box>
+				<a-box verlet-point="mass:0;" position="0 2 0" color="maroon"></a-box>
+			</a-entity>
+		</a-scene>
 	</body>
 </html>

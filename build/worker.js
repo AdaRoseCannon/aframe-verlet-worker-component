@@ -49,18 +49,18 @@
 
 	'use strict';
 
-	const World3D = __webpack_require__(3);
-	const Constraint3D = __webpack_require__(16);
-	const Point3D = __webpack_require__(20);
+	const World3D = __webpack_require__(2);
+	const Constraint3D = __webpack_require__(15);
+	const Point3D = __webpack_require__(19);
 	const timeFactor = 1;
 	const vec3 = {
-		create: __webpack_require__(4),
-		add: __webpack_require__(5),
+		create: __webpack_require__(3),
+		add: __webpack_require__(4),
 		// dot: require('gl-vec3/dot'),
-		subtract: __webpack_require__(7),
-		scale: __webpack_require__(8),
-		distance: __webpack_require__(18),
-		length: __webpack_require__(22)
+		subtract: __webpack_require__(6),
+		scale: __webpack_require__(7),
+		distance: __webpack_require__(17),
+		length: __webpack_require__(21)
 	};
 
 	const p3DPrototype = new Point3D().constructor.prototype;
@@ -99,7 +99,7 @@
 
 		this.addPoint = options => {
 			const p = new VerletThreePoint(options);
-			p.id = this.points.push(p) - 1;
+			p.id = this.points.push(p) + 99;
 
 			// if a point is attractive add a pulling force
 			this.points.forEach(p0 => {
@@ -132,7 +132,7 @@
 		};
 
 		this.world = new World3D({
-			gravity: options.gravity ? [0, -9.8, 0] : undefined,
+			gravity: options.gravity ? [0, options.gravity, 0] : undefined,
 			min: [-this.size.x / 2, -this.size.y / 2, -this.size.z / 2],
 			max: [this.size.x / 2, this.size.y / 2, this.size.z / 2],
 			friction: 0.99
@@ -148,7 +148,7 @@
 				return;
 			}
 
-			const dT = Math.min(0.032, (t - oldT) / 1000);
+			const dT = Math.min(0.064, (t - oldT) / 1000);
 			const vP = this.points.map(p => p.verletPoint);
 
 			this.constraints.forEach(c => c.solve());
@@ -163,47 +163,57 @@
 	// Recieve messages from the client and reply back onthe same port
 	self.addEventListener('message', function (event) {
 
-		const data = event.data;
-		Promise.all(data.map(({ message, id }) => new Promise(function (resolve) {
+		const transfer = [];
+		const data = Object.entries(event.data).map(([id, message]) => {
 			const i = message;
 
 			switch (i.action) {
 				case 'init':
 					verlet = new MyVerlet(i.options);
-					return resolve();
+					return { id };
 
 				case 'getPoints':
-					const transfer = i.byteData;
+
+					// Use Float32Array to handle the data
+					const byteData = new Float32Array(i.byteData);
 					verlet.animate();
 					for (let i = 0, l = verlet.points.length; i < l; i++) {
 						const p = verlet.points[i];
-						const j = i * 5;
-						transfer[j + 0] = p.id;
-						transfer[j + 1] = p.verletPoint.radius;
-						transfer[j + 2] = p.verletPoint.position[0];
-						transfer[j + 3] = p.verletPoint.position[1];
-						transfer[j + 4] = p.verletPoint.position[2];
+						const j = i * 4;
+						byteData[j + 0] = p.id;
+						byteData[j + 1] = p.verletPoint.position[0];
+						byteData[j + 2] = p.verletPoint.position[1];
+						byteData[j + 3] = p.verletPoint.position[2];
 					}
 
-					return resolve({ byteData: transfer });
+					transfer.push(byteData.buffer);
+
+					return { id, byteData: byteData.buffer };
+
+				// don't do anything just return the points
+				case 'noopPoints':
+					console.log(noop);
+					return { id, byteData: i.byteData };
 
 				case 'connectPoints':
 					const p1 = verlet.points[i.options.p1.id];
 					const p2 = verlet.points[i.options.p2.id];
-					return resolve({
+					return {
+						id,
 						constraintId: verlet.connect(p1, p2, i.options.constraintOptions)
-					});
+					};
 
 				case 'updateConstraint':
 					const c = verlet.constraints[i.options.constraintId];
 					if (i.options.stiffness !== undefined) c.stiffness = i.options.stiffness;
 					if (i.options.restingDistance !== undefined) c.restingDistance = i.options.restingDistance;
-					return resolve();
+					return { id };
 
 				case 'addPoint':
-					return resolve({
+					return {
+						id,
 						point: verlet.addPoint(i.pointOptions)
-					});
+					};
 
 				case 'updatePoint':
 					const d = i.pointOptions;
@@ -212,52 +222,43 @@
 					if (d.velocity !== undefined) p3.verletPoint.addForce([d.velocity.x, d.velocity.y, d.velocity.z]);
 					if (d.mass !== undefined) p3.verletPoint.mass = d.mass;
 					if (d.radius !== undefined) p3.verletPoint.radius = d.radius;
-					return resolve();
+					return { id };
 
 				case 'reset':
 					verlet.points.splice(0);
-					return resolve();
+					return { id };
 
 				default:
-					throw Error('Invalid Action');
+					return {
+						error: 'Invalid Action',
+						id
+					};
 			}
-		}).then(function (o = {}) {
-			o.id = id;
-			return o;
-		}, function (err) {
-			console.log(err);
-			const o = { id };
-			if (err) {
-				o.error = err.message ? err.message : err;
-			}
-			return o;
-		}))).then(function (response) {
-
-			// deliver data by transfering data
-			event.ports[0].postMessage(response, response.byteData ? [response.byteData] : undefined);
 		});
+
+		// deliver data by transfering data
+		self.postMessage(data, transfer);
 	});
 
 /***/ },
 /* 1 */,
-/* 2 */,
-/* 3 */
+/* 2 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var vec3 = {
-	    create: __webpack_require__(4),
-	    add: __webpack_require__(5),
-	    multiply: __webpack_require__(6),
-	    sub: __webpack_require__(7),
-	    scale: __webpack_require__(8),
-	    copy: __webpack_require__(9),
-	    sqrLen: __webpack_require__(10),
-	    fromValues: __webpack_require__(11),
+	    create: __webpack_require__(3),
+	    add: __webpack_require__(4),
+	    multiply: __webpack_require__(5),
+	    sub: __webpack_require__(6),
+	    scale: __webpack_require__(7),
+	    copy: __webpack_require__(8),
+	    sqrLen: __webpack_require__(9),
+	    fromValues: __webpack_require__(10),
 	}
-	module.exports = __webpack_require__(12)(vec3)
+	module.exports = __webpack_require__(11)(vec3)
 
 /***/ },
-/* 4 */
+/* 3 */
 /***/ function(module, exports) {
 
 	module.exports = create;
@@ -276,7 +277,7 @@
 	}
 
 /***/ },
-/* 5 */
+/* 4 */
 /***/ function(module, exports) {
 
 	module.exports = add;
@@ -297,7 +298,7 @@
 	}
 
 /***/ },
-/* 6 */
+/* 5 */
 /***/ function(module, exports) {
 
 	module.exports = multiply;
@@ -318,7 +319,7 @@
 	}
 
 /***/ },
-/* 7 */
+/* 6 */
 /***/ function(module, exports) {
 
 	module.exports = subtract;
@@ -339,7 +340,7 @@
 	}
 
 /***/ },
-/* 8 */
+/* 7 */
 /***/ function(module, exports) {
 
 	module.exports = scale;
@@ -360,7 +361,7 @@
 	}
 
 /***/ },
-/* 9 */
+/* 8 */
 /***/ function(module, exports) {
 
 	module.exports = copy;
@@ -380,7 +381,7 @@
 	}
 
 /***/ },
-/* 10 */
+/* 9 */
 /***/ function(module, exports) {
 
 	module.exports = squaredLength;
@@ -399,7 +400,7 @@
 	}
 
 /***/ },
-/* 11 */
+/* 10 */
 /***/ function(module, exports) {
 
 	module.exports = fromValues;
@@ -421,12 +422,12 @@
 	}
 
 /***/ },
-/* 12 */
+/* 11 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var number = __webpack_require__(13)
-	var clamp = __webpack_require__(14)
-	var createCollider = __webpack_require__(15)
+	var number = __webpack_require__(12)
+	var clamp = __webpack_require__(13)
+	var createCollider = __webpack_require__(14)
 
 	module.exports = function create(vec) {
 	    
@@ -498,7 +499,7 @@
 	}
 
 /***/ },
-/* 13 */
+/* 12 */
 /***/ function(module, exports) {
 
 	module.exports = function numtype(num, def) {
@@ -508,7 +509,7 @@
 	}
 
 /***/ },
-/* 14 */
+/* 13 */
 /***/ function(module, exports) {
 
 	module.exports = clamp
@@ -521,7 +522,7 @@
 
 
 /***/ },
-/* 15 */
+/* 14 */
 /***/ function(module, exports) {
 
 	module.exports = function(vec) {
@@ -578,21 +579,21 @@
 	}
 
 /***/ },
-/* 16 */
+/* 15 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var vec3 = {
-	    create: __webpack_require__(4),
-	    add: __webpack_require__(5),
-	    dot: __webpack_require__(17),
-	    sub: __webpack_require__(7),
-	    scale: __webpack_require__(8),
-	    distance: __webpack_require__(18)
+	    create: __webpack_require__(3),
+	    add: __webpack_require__(4),
+	    dot: __webpack_require__(16),
+	    sub: __webpack_require__(6),
+	    scale: __webpack_require__(7),
+	    distance: __webpack_require__(17)
 	}
-	module.exports = __webpack_require__(19)(vec3)
+	module.exports = __webpack_require__(18)(vec3)
 
 /***/ },
-/* 17 */
+/* 16 */
 /***/ function(module, exports) {
 
 	module.exports = dot;
@@ -609,7 +610,7 @@
 	}
 
 /***/ },
-/* 18 */
+/* 17 */
 /***/ function(module, exports) {
 
 	module.exports = distance;
@@ -629,7 +630,7 @@
 	}
 
 /***/ },
-/* 19 */
+/* 18 */
 /***/ function(module, exports) {
 
 	module.exports = function(vec) {
@@ -704,18 +705,18 @@
 
 
 /***/ },
-/* 20 */
+/* 19 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var vec3 = {
-	    create: __webpack_require__(4),
-	    sub: __webpack_require__(7),
-	    copy: __webpack_require__(9)
+	    create: __webpack_require__(3),
+	    sub: __webpack_require__(6),
+	    copy: __webpack_require__(8)
 	}
-	module.exports = __webpack_require__(21)(vec3)
+	module.exports = __webpack_require__(20)(vec3)
 
 /***/ },
-/* 21 */
+/* 20 */
 /***/ function(module, exports) {
 
 	module.exports = function(vec) {
@@ -758,7 +759,7 @@
 	}
 
 /***/ },
-/* 22 */
+/* 21 */
 /***/ function(module, exports) {
 
 	module.exports = length;
