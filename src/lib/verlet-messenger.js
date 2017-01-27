@@ -1,6 +1,5 @@
 'use strict';
 /* eslint-env commonjs, browser, es6 */
-/* eslint no-console: 0 */
 
 const awaitingResponseQueue = new Map();
 const BYTE_DATA_STAND_IN = 'BYTE_DATA_STAND_IN';
@@ -21,7 +20,6 @@ function resolveMessagePromise(event) {
 		delete d.id;
 		if (!d.error) {
 			if (d.byteData) {
-				// console.log('Recieved \'data\' back from worker');
 				this.dataAvailable = true;
 				this.data = new Float32Array(d.byteData);
 				d.byteData = this.data;
@@ -82,7 +80,6 @@ class Verlet {
 			};
 
 			if (transfer.indexOf(this.data.buffer) !== -1) {
-				// console.log('Transfering \'data\' to worker');
 				this.dataAvailable = false;
 				this.data = undefined;
 			}
@@ -136,7 +133,6 @@ class Verlet {
 	 * Run the physics System and return the updated points
 	 */
 	getPoints() {
-		// console.log(this.dataAvailable ? 'Data Available' : 'Data Unavailable');
 		return this.workerMessage({ action: 'getPoints', BYTE_DATA_STAND_IN });
 	}
 

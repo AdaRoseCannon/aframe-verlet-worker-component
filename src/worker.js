@@ -1,5 +1,4 @@
 /* eslint-env commonjs, worker, es6 */
-/* eslint no-console: 0 */
 
 'use strict';
 importScripts('https://cdn.polyfill.io/v2/polyfill.min.js');
@@ -168,7 +167,6 @@ self.addEventListener('message', function(event) {
 
 		switch (i.action) {
 			case 'init':
-				console.log('init');
 				verlet = new MyVerlet(i.options);
 				return { id };
 

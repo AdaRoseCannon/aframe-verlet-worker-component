@@ -45,7 +45,6 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	/* eslint-env commonjs, worker, es6 */
-	/* eslint no-console: 0 */
 
 	'use strict';
 
@@ -217,7 +216,6 @@
 
 			switch (i.action) {
 				case 'init':
-					console.log('init');
 					verlet = new MyVerlet(i.options);
 					return { id };
 

@@ -1,6 +1,5 @@
 'use strict';
 /* eslint-env commonjs, browser, es6 */
-/* eslint no-console: 0 */
 /* global AFRAME */
 
 /* TODO Keep track of unused workers in the event of the container being destroyed so that they can be reused later. */
@@ -10,7 +9,6 @@ const Verlet = require('./lib/verlet-messenger');
 async function start(options) {
 	const v = new Verlet();
 	await v.init(options);
-	console.log('Init complete')
 	return v;
 };
 
@@ -145,7 +143,6 @@ AFRAME.registerComponent('verlet-constraint', {
 			return Promise.all([this.parentReadyPromise, ...this.idPromises]).then(function (arrOfIDs) {
 				// remove every constraint
 				const v = arrOfIDs.shift();
-				console.log(arrOfIDs);
 				return Promise.all(arrOfIDs.map(id => v.removeConstraint(id)));
 			});
 		} else {

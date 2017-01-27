@@ -46,7 +46,6 @@
 
 	'use strict';
 	/* eslint-env commonjs, browser, es6 */
-	/* eslint no-console: 0 */
 	/* global AFRAME */
 
 	/* TODO Keep track of unused workers in the event of the container being destroyed so that they can be reused later. */
@@ -55,7 +54,6 @@
 		var _ref = _asyncToGenerator(function* (options) {
 			const v = new Verlet();
 			yield v.init(options);
-			console.log('Init complete');
 			return v;
 		});
 
@@ -196,7 +194,6 @@
 				return Promise.all([this.parentReadyPromise, ...this.idPromises]).then(function (arrOfIDs) {
 					// remove every constraint
 					const v = arrOfIDs.shift();
-					console.log(arrOfIDs);
 					return Promise.all(arrOfIDs.map(id => v.removeConstraint(id)));
 				});
 			} else {
@@ -262,7 +259,6 @@
 
 	'use strict';
 	/* eslint-env commonjs, browser, es6 */
-	/* eslint no-console: 0 */
 
 	const awaitingResponseQueue = new Map();
 	const BYTE_DATA_STAND_IN = 'BYTE_DATA_STAND_IN';
@@ -283,7 +279,6 @@
 			delete d.id;
 			if (!d.error) {
 				if (d.byteData) {
-					// console.log('Recieved \'data\' back from worker');
 					this.dataAvailable = true;
 					this.data = new Float32Array(d.byteData);
 					d.byteData = this.data;
@@ -344,7 +339,6 @@
 				};
 
 				if (transfer.indexOf(this.data.buffer) !== -1) {
-					// console.log('Transfering \'data\' to worker');
 					this.dataAvailable = false;
 					this.data = undefined;
 				}
@@ -398,7 +392,6 @@
 	  * Run the physics System and return the updated points
 	  */
 		getPoints() {
-			// console.log(this.dataAvailable ? 'Data Available' : 'Data Unavailable');
 			return this.workerMessage({ action: 'getPoints', BYTE_DATA_STAND_IN });
 		}
 
