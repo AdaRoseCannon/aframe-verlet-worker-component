@@ -72,7 +72,7 @@ AFRAME.registerComponent('verlet-container', {
 AFRAME.registerComponent('verlet-constraint', {
 	schema: {
 		stiffness: {
-			default: 1
+			default: 0.05
 		},
 		from: {
 			type: 'selectorAll'
@@ -201,3 +201,16 @@ AFRAME.registerComponent('verlet-point', {
 		});
 	},
 });
+
+AFRAME.registerPrimitive('a-verlet-constraint', {
+	defaultComponents: {
+		'verlet-constraint': {}
+	},
+
+	mappings: {
+		to: 'verlet-constraint.to',
+		from: 'verlet-constraint.from',
+		stiffness: 'verlet-constraint.stiffness',
+		distance: 'verlet-constraint.distance'
+	}
+})

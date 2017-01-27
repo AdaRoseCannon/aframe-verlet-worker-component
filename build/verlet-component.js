@@ -126,7 +126,7 @@
 	AFRAME.registerComponent('verlet-constraint', {
 		schema: {
 			stiffness: {
-				default: 1
+				default: 0.05
 			},
 			from: {
 				type: 'selectorAll'
@@ -250,6 +250,19 @@
 					return this.idPromise.then(id => c.updatePoint(id, this.data));
 				}
 			});
+		}
+	});
+
+	AFRAME.registerPrimitive('a-verlet-constraint', {
+		defaultComponents: {
+			'verlet-constraint': {}
+		},
+
+		mappings: {
+			to: 'verlet-constraint.to',
+			from: 'verlet-constraint.from',
+			stiffness: 'verlet-constraint.stiffness',
+			distance: 'verlet-constraint.distance'
 		}
 	});
 

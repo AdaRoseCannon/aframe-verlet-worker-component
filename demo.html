@@ -18,14 +18,14 @@
 			<a-entity verlet-container="floor: 0;" position="0 0 -5">
 				<a-box id="p1" verlet-point color="skyblue" position="0 3 0"></a-box>
 				<a-box id="p2" verlet-point="mass:2;position: 0 2 0; velocity: 0.1 0.1 -0.1;" color="maroon"></a-box>
+				<a-box id="p3" verlet-point="mass:1;position: 0 1 0;" verlet-constraint="to: #myAnchor; stiffness: 0.01; distance: 1;" color="orange"></a-box>
 				<a-box id="myAnchor" verlet-point="mass: 0;" color="green"  position="0 5 0"></a-box>
-				<!--<a-constraint from="p1" to="p2" stiffness="0.5"></a-constraint>-->
-				<a-entity verlet-constraint="from: #myAnchor; to: #p1, #p2; stiffness: 0.1; distance: 2;"></a-entity>
+				<a-verlet-constraint from="#myAnchor" to="#p1, #p2" stiffness="0.1" distance="2"></a-verlet-constraint>
 			</a-entity>
 		</a-scene>
 		<script>
 			setTimeout(function () {
-				const constraint = document.querySelector('[verlet-constraint]');
+				const constraint = document.querySelector('a-verlet-constraint');
 				constraint.parentNode.removeChild(constraint);
 			}, 4000);
 		</script>
