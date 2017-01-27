@@ -55,6 +55,7 @@
 		var _ref = _asyncToGenerator(function* (options) {
 			const v = new Verlet();
 			yield v.init(options);
+			console.log('Init complete');
 			return v;
 		});
 
@@ -270,6 +271,12 @@
 
 		// Iterate over the responses and resolve/reject accordingly
 		const response = event.data;
+
+		if (response.id === 'handshake') {
+			this.workerPromiseResolver();
+			return;
+		}
+
 		response.forEach(d => {
 			const waitingMessage = awaitingResponseQueue.get(d.id);
 			awaitingResponseQueue.delete(d.id);
@@ -292,13 +299,13 @@
 
 		constructor(maxPoints = 10) {
 			this.myWorker = new Worker('./build/worker.js');
+			this.workerPromise = new Promise(resolve => this.workerPromiseResolver = resolve);
 			this.myWorker.addEventListener('message', resolveMessagePromise.bind(this));
 			this.messageQueue = [];
 			this.setMaxPoints(maxPoints);
 
 			// Process messages once per frame
 			this.process = this.process.bind(this);
-			requestAnimationFrame(this.process);
 		}
 
 		/**
@@ -378,7 +385,13 @@
 	  * size: {x: 10, y: 10, x: 10}
 	  */
 		init(options) {
-			return this.workerMessage({ action: 'init', options });
+			return this.workerPromise.then(() => {
+				const promise = this.workerMessage({ action: 'init', options });
+
+				// send init message
+				this.process();
+				return promise;
+			});
 		}
 
 		/**

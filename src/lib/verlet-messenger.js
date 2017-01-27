@@ -9,6 +9,12 @@ function resolveMessagePromise(event) {
 
 	// Iterate over the responses and resolve/reject accordingly
 	const response = event.data;
+
+	if (response.id === 'handshake') {
+		this.workerPromiseResolver();
+		return;
+	}
+
 	response.forEach(d => {
 		const waitingMessage = awaitingResponseQueue.get(d.id);
 		awaitingResponseQueue.delete(d.id);
@@ -31,13 +37,13 @@ class Verlet {
 
 	constructor(maxPoints = 10) {
 		this.myWorker = new Worker('./build/worker.js');
+		this.workerPromise = new Promise(resolve => this.workerPromiseResolver = resolve);
 		this.myWorker.addEventListener('message', resolveMessagePromise.bind(this));
 		this.messageQueue = [];
 		this.setMaxPoints(maxPoints);
 
 		// Process messages once per frame
 		this.process = this.process.bind(this);
-		requestAnimationFrame(this.process);
 	}
 
 	/**
@@ -117,7 +123,13 @@ class Verlet {
 	 * size: {x: 10, y: 10, x: 10}
 	 */
 	init(options) {
-		return this.workerMessage({action: 'init', options});
+		return this.workerPromise.then(() => {
+			const promise = this.workerMessage({ action: 'init', options });
+
+			// send init message
+			this.process();
+			return promise;
+		});
 	}
 
 	/**

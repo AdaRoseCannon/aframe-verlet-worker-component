@@ -2,6 +2,7 @@
 /* eslint no-console: 0 */
 
 'use strict';
+importScripts('https://cdn.polyfill.io/v2/polyfill.min.js');
 
 let idIncrementer = 100;
 const World3D = require('verlet-system/3d');
@@ -167,6 +168,7 @@ self.addEventListener('message', function(event) {
 
 		switch (i.action) {
 			case 'init':
+				console.log('init');
 				verlet = new MyVerlet(i.options);
 				return { id };
 
@@ -252,3 +254,5 @@ self.addEventListener('message', function(event) {
 	// deliver data by transfering data
 	self.postMessage(data, transfer);
 });
+
+self.postMessage({id: 'handshake'});

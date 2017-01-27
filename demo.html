@@ -9,6 +9,7 @@
 		<title>AFrame Verlet Demo</title>
 		<meta name="description" content="">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<script src="https://cdn.polyfill.io/v2/polyfill.min.js"></script>
  		<script src="https://aframe.io/releases/0.4.0/aframe.min.js"></script>
 		<script src="build/verlet-component.js"></script>
 	</head>
@@ -22,5 +23,11 @@
 				<a-entity verlet-constraint="from: #myAnchor; to: #p1, #p2; stiffness: 0.1; distance: 2;"></a-entity>
 			</a-entity>
 		</a-scene>
+		<script>
+			setTimeout(function () {
+				const constraint = document.querySelector('[verlet-constraint]');
+				constraint.parentNode.removeChild(constraint);
+			}, 4000);
+		</script>
 	</body>
 </html>

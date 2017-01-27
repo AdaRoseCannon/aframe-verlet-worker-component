@@ -10,6 +10,7 @@ const Verlet = require('./lib/verlet-messenger');
 async function start(options) {
 	const v = new Verlet();
 	await v.init(options);
+	console.log('Init complete')
 	return v;
 };
 

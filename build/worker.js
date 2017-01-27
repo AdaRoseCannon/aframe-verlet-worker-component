@@ -49,6 +49,8 @@
 
 	'use strict';
 
+	importScripts('https://cdn.polyfill.io/v2/polyfill.min.js');
+
 	let idIncrementer = 100;
 	const World3D = __webpack_require__(2);
 	const Constraint3D = __webpack_require__(15);
@@ -215,6 +217,7 @@
 
 			switch (i.action) {
 				case 'init':
+					console.log('init');
 					verlet = new MyVerlet(i.options);
 					return { id };
 
@@ -300,6 +303,8 @@
 		// deliver data by transfering data
 		self.postMessage(data, transfer);
 	});
+
+	self.postMessage({ id: 'handshake' });
 
 /***/ },
 /* 1 */,
