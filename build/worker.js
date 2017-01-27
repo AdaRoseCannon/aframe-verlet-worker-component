@@ -271,7 +271,6 @@
 
 				case 'removePoint':
 					verlet.removePoint(i.options.id);
-
 					return { id };
 
 				case 'updatePoint':

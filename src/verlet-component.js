@@ -41,16 +41,19 @@ AFRAME.registerComponent('verlet-container', {
 				return d.point.id;
 			});
 	},
-	connectPoints(p1, p2, options) {
-		return this.systemPromise.then(v => v.connectPoints(p1, p2, options));
-	},
-	removeConstraint(id) {
-		return this.systemPromise.then(v => v.removeConstraint(id));
+	removePoint(id) {
+		return this.systemPromise.then(v => v.removePoint(id));
 	},
 	updatePoint(id, data) {
 		const inData = { id };
 		Object.assign(inData, data);
 		return this.systemPromise.then(v => v.updatePoint(inData));
+	},
+	connectPoints(p1, p2, options) {
+		return this.systemPromise.then(v => v.connectPoints(p1, p2, options));
+	},
+	removeConstraint(id) {
+		return this.systemPromise.then(v => v.removeConstraint(id));
 	},
 	tick() {
 		if(!this.v) return;
@@ -200,6 +203,16 @@ AFRAME.registerComponent('verlet-point', {
 			}
 		});
 	},
+
+	remove() {
+		return this.parentReadyPromise.then(c => {
+			if (this.idPromise) {
+				return this.idPromise.then(id => c.removePoint(id));
+			} else {
+				return Promise.resolve();
+			}
+		});
+	}
 });
 
 AFRAME.registerPrimitive('a-verlet-constraint', {

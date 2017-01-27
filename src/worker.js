@@ -222,8 +222,7 @@ self.addEventListener('message', function(event) {
 
 			case 'removePoint':
 				verlet.removePoint(i.options.id);
-
-				return {id};
+				return { id };
 
 			case 'updatePoint':
 				const d = i.pointOptions;

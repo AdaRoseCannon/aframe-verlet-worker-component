@@ -17,26 +17,36 @@
 		<a-scene>
 			<a-entity verlet-container="floor: 0;" position="0 0 -5">
 				<a-box id="p1" verlet-point color="skyblue" position="0 3 0"></a-box>
-				<a-box id="p2" verlet-point="mass:2;position: 0 2 0; velocity: 0.1 0.1 -0.1;" color="maroon"></a-box>
-				<a-box id="p3" verlet-point="mass:1;position: 0 1 0;" verlet-constraint="to: #myAnchor; stiffness: 0.01; distance: 1;" color="orange"></a-box>
-				<a-box id="myAnchor" verlet-point="mass: 0;" color="green"  position="0 5 0"></a-box>
-				<a-verlet-constraint from="#myAnchor" to="#p1, #p2" stiffness="0.03" distance="2"></a-verlet-constraint>
+				<a-box id="p2" verlet-point="mass:2; velocity: 0.1 0.1 -0.1;" position=" 0 2 0" color="maroon"></a-box>
+				<a-box id="p3" verlet-point="mass:1;position: 0 1 0;" verlet-constraint="to: #myAnchor2; stiffness: 0.01; distance: 1;" color="orange"></a-box>
+				<a-box id="myAnchor1" verlet-point="mass: 0;" color="green"  position="-1 5 0"></a-box>
+				<a-box id="myAnchor2" verlet-point="mass: 0;" color="pink"  position="1 5 0"></a-box>
+				<a-verlet-constraint from="#myAnchor1" to="#p1, #p2" stiffness="0.03" distance="2"></a-verlet-constraint>
 			</a-entity>
 		</a-scene>
 		<script>
+
+			var container = document.querySelector('[verlet-container]');
 			setTimeout(function () {
 
 				// break connection to anchor from p1 and p2
 				const constraint = document.querySelector('a-verlet-constraint');
-				constraint.parentNode.removeChild(constraint);
-			}, 4000);
+				container.removeChild(constraint);
+			}, 3000);
 
 			setTimeout(function () {
 
 				// stop anchor being a fixed point
-				const anchor = document.querySelector('#myAnchor');
+				const anchor = document.querySelector('#myAnchor1');
 				anchor.setAttribute('verlet-point', 'mass', '1');
-			}, 4000);
+			}, 6000);
+
+			setTimeout(function () {
+
+				// delete anchor
+				const anchor = document.querySelector('#myAnchor2');
+				container.removeChild(anchor);
+			}, 9000);
 		</script>
 	</body>
 </html>

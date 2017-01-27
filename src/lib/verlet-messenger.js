@@ -161,6 +161,10 @@ class Verlet {
 		return this.workerMessage({action: 'updatePoint', pointOptions});
 	}
 
+	removePoint(id) {
+		return this.workerMessage({action: 'removePoint', options: {id}});
+	}
+
 	connectPoints(id1, id2, constraintOptions) {
 		return this.workerMessage({action: 'connectPoints', options: {id1, id2, constraintOptions}});
 	}
