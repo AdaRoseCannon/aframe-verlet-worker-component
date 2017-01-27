@@ -49,6 +49,8 @@
 	/* eslint no-console: 0 */
 	/* global AFRAME */
 
+	/* TODO Keep track of unused workers in the event of the container being destroyed so that they can be reused later. */
+
 	let start = (() => {
 		var _ref = _asyncToGenerator(function* (options) {
 			const v = new Verlet();
@@ -95,7 +97,10 @@
 			});
 		},
 		connectPoints(p1, p2, options) {
-			this.systemPromise.then(v => v.connectPoints(p1, p2, options));
+			return this.systemPromise.then(v => v.connectPoints(p1, p2, options));
+		},
+		removeConstraint(id) {
+			return this.systemPromise.then(v => v.removeConstraint(id));
 		},
 		updatePoint(id, data) {
 			const inData = { id };
@@ -146,39 +151,56 @@
 		},
 
 		update() {
-			this.data.restingDistance = this.data.distance ? Number(this.data.distance) : undefined;
-			this.parentReadyPromise.then(c => {
-				if (!this.data.from || !this.data.from.length) {
-					if (this.el.matches('[verlet-point]')) {
-						this.data.from = [this.el];
-					} else {
-						this.data.from = [];
-					}
-				}
 
-				if (!this.data.to || !this.data.to.length) {
-					if (this.el.matches('[verlet-point]')) {
-						this.data.to = [this.el];
-					} else {
-						this.data.to = [];
-					}
-				}
-
-				for (const i of this.data.to) {
-					for (const j of this.data.from) {
-						if (i !== j) {
-							if (!i.components['verlet-point'].idPromise) i.updateComponent('verlet-point');
-							if (!j.components['verlet-point'].idPromise) j.updateComponent('verlet-point');
-							Promise.all([this.parentReadyPromise, i.components['verlet-point'].idPromise, j.components['verlet-point'].idPromise]).then(arr => {
-								const verletSystem = arr[0];
-								const id1 = arr[1];
-								const id2 = arr[2];
-								verletSystem.connectPoints(id1, id2, { stiffness: this.data.stiffness, restingDistance: this.data.restingDistance });
-							});
+			// destroy everything then rebuild!
+			this.remove().then(() => {
+				this.idPromises = this.idPromises || [];
+				this.data.restingDistance = this.data.distance ? Number(this.data.distance) : undefined;
+				this.parentReadyPromise.then(verletSystem => {
+					if (!this.data.from || !this.data.from.length) {
+						if (this.el.matches('[verlet-point]')) {
+							this.data.from = [this.el];
+						} else {
+							this.data.from = [];
 						}
 					}
-				}
+
+					if (!this.data.to || !this.data.to.length) {
+						if (this.el.matches('[verlet-point]')) {
+							this.data.to = [this.el];
+						} else {
+							this.data.to = [];
+						}
+					}
+
+					for (const i of this.data.to) {
+						for (const j of this.data.from) {
+							if (i !== j) {
+								if (!i.components['verlet-point'].idPromise) i.updateComponent('verlet-point');
+								if (!j.components['verlet-point'].idPromise) j.updateComponent('verlet-point');
+								this.idPromises.push(Promise.all([i.components['verlet-point'].idPromise, j.components['verlet-point'].idPromise]).then(arr => {
+									const id1 = arr[0];
+									const id2 = arr[1];
+									return verletSystem.connectPoints(id1, id2, { stiffness: this.data.stiffness, restingDistance: this.data.restingDistance }).then(obj => obj.constraintId);
+								}));
+							}
+						}
+					}
+				});
 			});
+		},
+
+		remove() {
+			if (this.idPromises) {
+				return Promise.all([this.parentReadyPromise, ...this.idPromises]).then(function (arrOfIDs) {
+					// remove every constraint
+					const v = arrOfIDs.shift();
+					console.log(arrOfIDs);
+					return Promise.all(arrOfIDs.map(id => v.removeConstraint(id)));
+				});
+			} else {
+				return Promise.resolve();
+			}
 		}
 	});
 
@@ -398,6 +420,10 @@
 
 		updateConstraint(options) {
 			return this.workerMessage({ action: 'updateConstraint', options });
+		}
+
+		removeConstraint(constraintId) {
+			return this.workerMessage({ action: 'removeConstraint', options: { constraintId } });
 		}
 
 		reset() {

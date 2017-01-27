@@ -161,6 +161,10 @@ class Verlet {
 		return this.workerMessage({action: 'updateConstraint', options });
 	}
 
+	removeConstraint(constraintId) {
+		return this.workerMessage({ action: 'removeConstraint', options: { constraintId }});
+	}
+
 	reset() {
 		return this.workerMessage({action: 'reset'});
 	}
