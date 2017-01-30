@@ -62,7 +62,7 @@ class Verlet {
 		if (this.messageQueue.length) {
 
 			const transfer = [];
-			const messageToSend = {};
+			const messageToSend = [];
 
 			const queue = this.messageQueue.splice(0);
 			for (const i of queue) {
@@ -75,7 +75,7 @@ class Verlet {
 					}
 				}
 
-				messageToSend[i.id] = i.message;
+				messageToSend.push([i.id, i.message]);
 				awaitingResponseQueue.set(i.id, i);
 			};
 

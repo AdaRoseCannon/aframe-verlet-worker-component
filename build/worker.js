@@ -112,27 +112,29 @@
 
 
 		this.points = [];
-		this.pointMap = {};
+		this.pointMap = new Map();
 		this.constraints = [];
-		this.constraintMap = {};
+		this.constraintMap = new Map();
 
 		this.addPoint = function (options) {
 			var p = new VerletThreePoint(options);
+			var p0 = void 0;
+			var iter = _this.pointMap.values();
 			p.id = idIncrementer++;
 			p.constraints = [];
 
 			// if a point is attractive add a pulling force
-			Object.values(_this.pointMap).forEach(function (p0) {
+			while (p0 = iter.next(), !p0.done && (p0 = p0.value)) {
 				if (p.attraction || p0.attraction && p !== p0) {
 					_this.connect(p, p0, {
 						stiffness: (p.attraction || 0) + (p0.attraction || 0),
 						restingDistance: p.radius + p0.radius
 					});
 				}
-			});
+			}
 
 			_this.points.push(p.verletPoint);
-			_this.pointMap[p.id] = p;
+			_this.pointMap.set(p.id, p);
 			p.verletPoint.id = p.id;
 
 			return p;
@@ -141,12 +143,12 @@
 		this.removePoint = function (id) {
 
 			// remove any associated constraints
-			_this.pointMap[id].constraints.forEach(function (cId) {
+			_this.pointMap.get(id).constraints.forEach(function (cId) {
 				return _this.removeConstraint(cId);
 			});
 
 			// remove the point
-			delete _this.pointMap[id];
+			_this.pointMap.delete(id);
 
 			// trigger cache cleanup
 			_this.needsUpdate = true;
@@ -161,14 +163,14 @@
 			var c = new Constraint3D([p1, p2], options);
 			c.id = idIncrementer++;
 			_this.constraints.push(c);
-			_this.constraintMap[c.id] = c;
+			_this.constraintMap.set(c.id, c);
 			return c.id;
 		};
 
 		this.removeConstraint = function (constraintId) {
 
 			// remove constraint
-			delete _this.constraintMap[constraintId];
+			_this.constraintMap.delete(constraintId);
 
 			// trigger cache cleanup
 			_this.needsUpdate = true;
@@ -200,12 +202,12 @@
 				var _points, _constraints;
 
 				this.points.splice(0);
-				(_points = this.points).push.apply(_points, _toConsumableArray(Object.values(this.pointMap).map(function (p) {
+				(_points = this.points).push.apply(_points, _toConsumableArray(Array.from(this.pointMap.values()).map(function (p) {
 					return p.verletPoint;
 				})));
 
 				this.constraints.splice(0);
-				(_constraints = this.constraints).push.apply(_constraints, _toConsumableArray(Object.values(this.constraintMap)));
+				(_constraints = this.constraints).push.apply(_constraints, _toConsumableArray(this.constraintMap.values()));
 
 				this.needsUpdate = false;
 			}
@@ -232,7 +234,7 @@
 	self.addEventListener('message', function (event) {
 
 		var transfer = [];
-		var data = Object.entries(event.data).map(function (_ref2) {
+		var data = event.data.map(function (_ref2) {
 			var _ref3 = _slicedToArray(_ref2, 2),
 			    id = _ref3[0],
 			    message = _ref3[1];
@@ -268,8 +270,8 @@
 					return { id: id, byteData: i.byteData };
 
 				case 'connectPoints':
-					var p1 = verlet.pointMap[i.options.id1];
-					var p2 = verlet.pointMap[i.options.id2];
+					var p1 = verlet.pointMap.get(i.options.id1);
+					var p2 = verlet.pointMap.get(i.options.id2);
 					var constraintId = verlet.connect(p1.verletPoint, p2.verletPoint, i.options.constraintOptions);
 					p1.constraints.push(constraintId);
 					p2.constraints.push(constraintId);
@@ -283,7 +285,7 @@
 					return { id: id };
 
 				case 'updateConstraint':
-					var c = verlet.constraintMap[i.options.constraintId];
+					var c = verlet.constraintMap.get(i.options.constraintId);
 					if (i.options.stiffness !== undefined) c.stiffness = i.options.stiffness;
 					if (i.options.restingDistance !== undefined) c.restingDistance = i.options.restingDistance;
 					return { id: id };
@@ -300,7 +302,7 @@
 
 				case 'updatePoint':
 					var d = i.pointOptions;
-					var p3 = verlet.pointMap[d.id];
+					var p3 = verlet.pointMap.get(d.id);
 					if (d.position !== undefined) p3.verletPoint.place([d.position.x, d.position.y, d.position.z]);
 					if (d.velocity !== undefined) p3.verletPoint.addForce([d.velocity.x, d.velocity.y, d.velocity.z]);
 					if (d.mass !== undefined) p3.verletPoint.mass = d.mass;
@@ -309,9 +311,9 @@
 
 				case 'reset':
 					verlet.points.splice(0);
-					verlet.pointMap = {};
+					verlet.pointMap = new Map();
 					verlet.constraints.splice(0);
-					verlet.constraintMap = {};
+					verlet.constraintMap = new Map();
 					return { id: id };
 
 				default:

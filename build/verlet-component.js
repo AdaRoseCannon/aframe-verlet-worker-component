@@ -1390,7 +1390,7 @@
 				if (this.messageQueue.length) {
 
 					var transfer = [];
-					var messageToSend = {};
+					var messageToSend = [];
 
 					var queue = this.messageQueue.splice(0);
 					var _iteratorNormalCompletion = true;
@@ -1410,7 +1410,7 @@
 								}
 							}
 
-							messageToSend[i.id] = i.message;
+							messageToSend.push([i.id, i.message]);
 							awaitingResponseQueue.set(i.id, i);
 						}
 					} catch (err) {
