@@ -1,7 +1,7 @@
 /* eslint-env commonjs, worker, es6 */
 
 'use strict';
-importScripts('https://cdn.polyfill.io/v2/polyfill.min.js');
+importScripts('https://cdn.polyfill.io/v2/polyfill.js?features=es6');
 
 let idIncrementer = 100;
 const World3D = require('verlet-system/3d');
