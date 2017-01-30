@@ -170,6 +170,12 @@ AFRAME.registerComponent('verlet-point', {
 		},
 		radius: {
 			default: 0
+		},
+		attraction: {
+			default: 0
+		},
+		attractionRange: {
+			default: 'contact'
 		}
 	},
 	init () {

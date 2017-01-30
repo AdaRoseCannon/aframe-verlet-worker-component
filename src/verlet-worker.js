@@ -18,21 +18,20 @@ const vec3 = {
     length: require('gl-vec3/length')
 };
 
-const p3DPrototype = (new Point3D()).constructor.prototype;
-p3DPrototype.intersects = function (p) { return vec3.distance(this.position, p.position) <= this.radius + p.radius; };
-p3DPrototype.distanceFrom = function (p) { return vec3.distance(this.position, p.position); };
-
 class VerletThreePoint {
 	constructor({
 		position = { x: 0, y: 0, z: 0 },
 		radius = 1,
 		mass = 1,
 		attraction = 0,
+		attractionRange = Infinity,
 		velocity = { x: 0, y: 0, z: 0 }
 	}) {
 		this.initialRadius = radius;
 		this.initialMass = mass;
 		this.attraction = attraction;
+		this.attractionRange = attraction;
+		this.constraints = [];
 
 		this.verletPoint = new Point3D({
 			position: [ position.x, position.y, position.z ],
@@ -55,21 +54,24 @@ function MyVerlet(options = {}) {
 		let p0;
 		const iter = this.pointMap.values();
 		p.id = idIncrementer++;
-		p.constraints = [];
+		p.verletPoint.id = p.id;
 
 		// if a point is attractive add a pulling force
 		while (p0 = iter.next(), !p0.done && (p0 = p0.value)) {
 			if (p.attraction || p0.attraction && p !== p0) {
-				this.connect(p, p0, {
+				this.connect(p.verletPoint, p0.verletPoint, {
 					stiffness: (p.attraction || 0) + (p0.attraction || 0),
-					restingDistance: p.radius + p0.radius
+					restingDistance: p.verletPoint.radius + p0.verletPoint.radius,
+
+					// if the range is contact range then limit it to the sum of the radius
+					// otherwise it is the range as a Number or Infinity
+					range: p.attractionRange === 'contact' ? p.verletPoint.radius + p0.verletPoint.radius : (p.attractionRange ? Number(p.attractionRange) : Infinity)
 				});
 			}
 		}
 
 		this.points.push(p.verletPoint);
 		this.pointMap.set(p.id, p);
-		p.verletPoint.id = p.id;
 
 		return p;
 	};
@@ -93,6 +95,8 @@ function MyVerlet(options = {}) {
 		};
 
 		const c = new Constraint3D([p1, p2], options);
+		c.range = options.range || Infinity;
+
 		c.id = idIncrementer++;
 		this.constraints.push(c);
 		this.constraintMap.set(c.id, c);
@@ -149,7 +153,14 @@ function MyVerlet(options = {}) {
 		const dT = Math.min(0.064, (t - oldT) / 1000);
 
 		for (let i = 0, l = this.constraints.length; i < l; i++) {
-			this.constraints[i].solve();
+			const c = this.constraints[i];
+			if (c.range &&
+				c.range !== Infinity &&
+				vec3.distance(c.points[0].position, c.points[1].position) > c.range
+			) {
+				continue;
+			}
+			c.solve();
 		}
 
 		this.world.integrate(this.points, dT * timeFactor);

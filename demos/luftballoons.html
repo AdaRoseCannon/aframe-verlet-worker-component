@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<title>AFrame Verlet Demo</title>
+		<meta name="description" content="">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<script src="https://cdn.polyfill.io/v2/polyfill.min.js"></script>
+ 		<script src="https://aframe.io/releases/0.4.0/aframe.min.js"></script>
+		<script src="../build/verlet-component.js"></script>
+	</head>
+	<body>
+		<a-scene>
+
+			<!-- make all the items float up (like balloon) -->
+			<a-entity verlet-container="gravity: 9.8;" position="0 0 -5">
+				<a-entity id="anchor" verlet-point="mass: 0;"></a-entity>
+				<script>
+					var out = '';
+					for (let i=0; i<10; i++) {
+						out += '<a-sphere radius="1" verlet-constraint="to: #anchor; distance: 2; stiffness: 0.2;" verlet-point="mass:1; radius: 0.5; attraction: 0.1; attractionRange: 0.6; position:' + Math.random() + ' ' + Math.random() + ' ' + Math.random() + ';" color="hsl(' + Math.random() * 360 + ', 80%, 60%)"></a-sphere>'
+					}
+					document.write(out);
+				</script>
+			</a-entity>
+		</a-scene>
+	</body>
+</html>
