@@ -30,7 +30,7 @@ class VerletThreePoint {
 		this.initialRadius = radius;
 		this.initialMass = mass;
 		this.attraction = attraction;
-		this.attractionRange = attraction;
+		this.attractionRange = attractionRange;
 		this.constraints = [];
 
 		this.verletPoint = new Point3D({
