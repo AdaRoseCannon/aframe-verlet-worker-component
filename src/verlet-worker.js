@@ -189,11 +189,11 @@ self.addEventListener('message', function(event) {
 
 				transfer.push(byteData.buffer);
 
-				return { id, byteData: byteData.buffer };
+				return { id, byteData: byteData.buffer, length: verlet.points.length };
 
 			// don't do anything just return the points
 			case 'noopPoints':
-				return {id, byteData: i.byteData};
+				return {id, byteData: i.byteData, length: verlet.points.length};
 
 			case 'connectPoints':
 				const p1 = verlet.pointMap.get(i.options.id1);
@@ -219,7 +219,8 @@ self.addEventListener('message', function(event) {
 			case 'addPoint':
 				return {
 					id,
-					point: verlet.addPoint(i.pointOptions)
+					point: verlet.addPoint(i.pointOptions),
+					length: verlet.points.length
 				};
 
 			case 'removePoint':

@@ -4,6 +4,12 @@
 const awaitingResponseQueue = new Map();
 const BYTE_DATA_STAND_IN = 'BYTE_DATA_STAND_IN';
 
+const currentScript = document.currentScript || (function () {
+	var scripts = document.getElementsByTagName( 'script' );
+	return scripts[ scripts.length - 1 ];
+} ());
+const defaultWorkerUrl = (currentScript && currentScript.src && currentScript.src.replace(/[^/]+.js$/, 'verlet-worker.js')) || 'https://rawgit.com/AdaRoseEdwards/aframe-verlet-worker-component/master/build/verlet-worker.js';
+
 function resolveMessagePromise(event) {
 
 	// Iterate over the responses and resolve/reject accordingly
@@ -33,8 +39,8 @@ function resolveMessagePromise(event) {
 
 class Verlet {
 
-	constructor(maxPoints = 10) {
-		this.myWorker = new Worker('./build/worker.js');
+	constructor(url = defaultWorkerUrl, maxPoints = 8) {
+		this.myWorker = new Worker(url);
 		this.workerPromise = new Promise(resolve => this.workerPromiseResolver = resolve);
 		this.myWorker.addEventListener('message', resolveMessagePromise.bind(this));
 		this.messageQueue = [];
@@ -146,7 +152,14 @@ class Verlet {
      * attraction [Number] - Pre makes connects point to all others
 	 * */
 	addPoint(pointOptions) {
-		return this.workerMessage({action: 'addPoint', pointOptions});
+		return this.workerMessage({ action: 'addPoint', pointOptions })
+		.then(result => {
+			if (result.length > 0.66 * this.maxPoints) {
+				this.setMaxPoints(this.maxPoints * 2);
+				console.log('Updated the memory space for the verlet points to hold' + this.maxPoints + ' points.');
+			}
+			return result;
+		});
 	}
 
 	/**

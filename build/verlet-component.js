@@ -61,7 +61,7 @@
 				while (1) {
 					switch (_context.prev = _context.next) {
 						case 0:
-							v = new Verlet();
+							v = options.workerUrl ? new Verlet(options.workerUrl) : new Verlet();
 							_context.next = 3;
 							return v.init(options);
 
@@ -101,6 +101,9 @@
 			},
 			floor: {
 				default: -Infinity
+			},
+			workerUrl: {
+				default: ''
 			}
 		},
 		init: function init() {
@@ -156,14 +159,15 @@
 			this.v.process();
 		},
 		updatePoints: function updatePoints(_ref2) {
-			var byteData = _ref2.byteData;
+			var byteData = _ref2.byteData,
+			    length = _ref2.length;
 
-			for (var i = 0, l = byteData.length; i < l; i += 4) {
-				var point = byteData[i + 0] && this.points.get(byteData[i + 0]);
+			for (var i = 0, l = length; i < l; i += 1) {
+				var point = byteData[i * 4 + 0] && this.points.get(byteData[i * 4 + 0]);
 				if (!point) continue;
-				var pX = byteData[i + 1];
-				var pY = byteData[i + 2];
-				var pZ = byteData[i + 3];
+				var pX = byteData[i * 4 + 1];
+				var pY = byteData[i * 4 + 2];
+				var pZ = byteData[i * 4 + 3];
 				point.setPosition(pX, pY, pZ);
 			}
 		}
@@ -1319,6 +1323,12 @@
 	var awaitingResponseQueue = new Map();
 	var BYTE_DATA_STAND_IN = 'BYTE_DATA_STAND_IN';
 
+	var currentScript = document.currentScript || function () {
+		var scripts = document.getElementsByTagName('script');
+		return scripts[scripts.length - 1];
+	}();
+	var defaultWorkerUrl = currentScript && currentScript.src && currentScript.src.replace(/[^/]+.js$/, 'verlet-worker.js') || 'https://rawgit.com/AdaRoseEdwards/aframe-verlet-worker-component/master/build/verlet-worker.js';
+
 	function resolveMessagePromise(event) {
 		var _this = this;
 
@@ -1351,11 +1361,12 @@
 		function Verlet() {
 			var _this2 = this;
 
-			var maxPoints = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 10;
+			var url = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : defaultWorkerUrl;
+			var maxPoints = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 8;
 
 			_classCallCheck(this, Verlet);
 
-			this.myWorker = new Worker('./build/worker.js');
+			this.myWorker = new Worker(url);
 			this.workerPromise = new Promise(function (resolve) {
 				return _this2.workerPromiseResolver = resolve;
 			});
@@ -1530,7 +1541,15 @@
 		}, {
 			key: 'addPoint',
 			value: function addPoint(pointOptions) {
-				return this.workerMessage({ action: 'addPoint', pointOptions: pointOptions });
+				var _this4 = this;
+
+				return this.workerMessage({ action: 'addPoint', pointOptions: pointOptions }).then(function (result) {
+					if (result.length > 0.66 * _this4.maxPoints) {
+						_this4.setMaxPoints(_this4.maxPoints * 2);
+						console.log('Updated the memory space for the verlet points to hold' + _this4.maxPoints + ' points.');
+					}
+					return result;
+				});
 			}
 
 			/**

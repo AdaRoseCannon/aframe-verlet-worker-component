@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "rm build/*; webpack --optimize-minimize; mv build/worker.js build/worker.min.js; mv build/verlet-component.js build/verlet-component.min.js; webpack",
+    "build": "rm build/*; webpack --optimize-minimize; mv build/verlet-worker.js build/verlet-worker.min.js; mv build/verlet-component.js build/verlet-component.min.js; webpack",
     "build:min": "webpack --optimize-minimize",
     "build:dev": "webpack --watch"
   },

@@ -3,7 +3,7 @@
 
 module.exports = {
 	entry: {
-		worker: './src/worker.js',
+		'verlet-worker': './src/verlet-worker.js',
 		'verlet-component': './src/verlet-component.js',
 	},
 	output: {

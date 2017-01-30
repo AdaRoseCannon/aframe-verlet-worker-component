@@ -263,11 +263,11 @@
 
 					transfer.push(byteData.buffer);
 
-					return { id: id, byteData: byteData.buffer };
+					return { id: id, byteData: byteData.buffer, length: verlet.points.length };
 
 				// don't do anything just return the points
 				case 'noopPoints':
-					return { id: id, byteData: i.byteData };
+					return { id: id, byteData: i.byteData, length: verlet.points.length };
 
 				case 'connectPoints':
 					var p1 = verlet.pointMap.get(i.options.id1);
@@ -293,7 +293,8 @@
 				case 'addPoint':
 					return {
 						id: id,
-						point: verlet.addPoint(i.pointOptions)
+						point: verlet.addPoint(i.pointOptions),
+						length: verlet.points.length
 					};
 
 				case 'removePoint':

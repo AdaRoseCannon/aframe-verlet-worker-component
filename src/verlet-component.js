@@ -7,7 +7,7 @@
 const Verlet = require('./lib/verlet-messenger');
 
 async function start(options) {
-	const v = new Verlet();
+	const v = options.workerUrl ? new Verlet(options.workerUrl) : new Verlet();
 	await v.init(options);
 	return v;
 };
@@ -22,6 +22,9 @@ AFRAME.registerComponent('verlet-container', {
 		},
 		floor: {
 			default: -Infinity
+		},
+		workerUrl: {
+			default: ''
 		}
 	},
 	init () {
@@ -60,13 +63,13 @@ AFRAME.registerComponent('verlet-container', {
 		this.v.getPoints().then(this.updatePoints);
 		this.v.process();
 	},
-	updatePoints({byteData}) {
-		for (let i = 0, l = byteData.length; i < l; i += 4) {
-			const point = byteData[i + 0] && this.points.get(byteData[i + 0]);
+	updatePoints({byteData, length}) {
+		for (let i = 0, l = length; i < l; i += 1) {
+			const point = byteData[i * 4 + 0] && this.points.get(byteData[i * 4 + 0]);
 			if (!point) continue;
-			const pX = byteData[i + 1];
-			const pY = byteData[i + 2];
-			const pZ = byteData[i + 3];
+			const pX = byteData[i * 4 + 1];
+			const pY = byteData[i * 4 + 2];
+			const pZ = byteData[i * 4 + 3];
 			point.setPosition(pX, pY, pZ);
 		}
 	}
