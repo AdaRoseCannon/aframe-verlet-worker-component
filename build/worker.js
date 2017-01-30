@@ -57,18 +57,18 @@
 	importScripts('https://cdn.polyfill.io/v2/polyfill.min.js');
 
 	var idIncrementer = 100;
-	var World3D = __webpack_require__(2);
-	var Constraint3D = __webpack_require__(15);
-	var Point3D = __webpack_require__(19);
+	var World3D = __webpack_require__(6);
+	var Constraint3D = __webpack_require__(19);
+	var Point3D = __webpack_require__(23);
 	var timeFactor = 1;
 	var vec3 = {
-		create: __webpack_require__(3),
-		add: __webpack_require__(4),
+		create: __webpack_require__(7),
+		add: __webpack_require__(8),
 		// dot: require('gl-vec3/dot'),
-		subtract: __webpack_require__(6),
-		scale: __webpack_require__(7),
-		distance: __webpack_require__(17),
-		length: __webpack_require__(21)
+		subtract: __webpack_require__(10),
+		scale: __webpack_require__(11),
+		distance: __webpack_require__(21),
+		length: __webpack_require__(25)
 	};
 
 	var p3DPrototype = new Point3D().constructor.prototype;
@@ -330,23 +330,27 @@
 
 /***/ },
 /* 1 */,
-/* 2 */
+/* 2 */,
+/* 3 */,
+/* 4 */,
+/* 5 */,
+/* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var vec3 = {
-	    create: __webpack_require__(3),
-	    add: __webpack_require__(4),
-	    multiply: __webpack_require__(5),
-	    sub: __webpack_require__(6),
-	    scale: __webpack_require__(7),
-	    copy: __webpack_require__(8),
-	    sqrLen: __webpack_require__(9),
-	    fromValues: __webpack_require__(10),
+	    create: __webpack_require__(7),
+	    add: __webpack_require__(8),
+	    multiply: __webpack_require__(9),
+	    sub: __webpack_require__(10),
+	    scale: __webpack_require__(11),
+	    copy: __webpack_require__(12),
+	    sqrLen: __webpack_require__(13),
+	    fromValues: __webpack_require__(14),
 	}
-	module.exports = __webpack_require__(11)(vec3)
+	module.exports = __webpack_require__(15)(vec3)
 
 /***/ },
-/* 3 */
+/* 7 */
 /***/ function(module, exports) {
 
 	module.exports = create;
@@ -365,7 +369,7 @@
 	}
 
 /***/ },
-/* 4 */
+/* 8 */
 /***/ function(module, exports) {
 
 	module.exports = add;
@@ -386,7 +390,7 @@
 	}
 
 /***/ },
-/* 5 */
+/* 9 */
 /***/ function(module, exports) {
 
 	module.exports = multiply;
@@ -407,7 +411,7 @@
 	}
 
 /***/ },
-/* 6 */
+/* 10 */
 /***/ function(module, exports) {
 
 	module.exports = subtract;
@@ -428,7 +432,7 @@
 	}
 
 /***/ },
-/* 7 */
+/* 11 */
 /***/ function(module, exports) {
 
 	module.exports = scale;
@@ -449,7 +453,7 @@
 	}
 
 /***/ },
-/* 8 */
+/* 12 */
 /***/ function(module, exports) {
 
 	module.exports = copy;
@@ -469,7 +473,7 @@
 	}
 
 /***/ },
-/* 9 */
+/* 13 */
 /***/ function(module, exports) {
 
 	module.exports = squaredLength;
@@ -488,7 +492,7 @@
 	}
 
 /***/ },
-/* 10 */
+/* 14 */
 /***/ function(module, exports) {
 
 	module.exports = fromValues;
@@ -510,12 +514,12 @@
 	}
 
 /***/ },
-/* 11 */
+/* 15 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var number = __webpack_require__(12)
-	var clamp = __webpack_require__(13)
-	var createCollider = __webpack_require__(14)
+	var number = __webpack_require__(16)
+	var clamp = __webpack_require__(17)
+	var createCollider = __webpack_require__(18)
 
 	module.exports = function create(vec) {
 	    
@@ -587,7 +591,7 @@
 	}
 
 /***/ },
-/* 12 */
+/* 16 */
 /***/ function(module, exports) {
 
 	module.exports = function numtype(num, def) {
@@ -597,7 +601,7 @@
 	}
 
 /***/ },
-/* 13 */
+/* 17 */
 /***/ function(module, exports) {
 
 	module.exports = clamp
@@ -610,7 +614,7 @@
 
 
 /***/ },
-/* 14 */
+/* 18 */
 /***/ function(module, exports) {
 
 	module.exports = function(vec) {
@@ -667,21 +671,21 @@
 	}
 
 /***/ },
-/* 15 */
+/* 19 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var vec3 = {
-	    create: __webpack_require__(3),
-	    add: __webpack_require__(4),
-	    dot: __webpack_require__(16),
-	    sub: __webpack_require__(6),
-	    scale: __webpack_require__(7),
-	    distance: __webpack_require__(17)
+	    create: __webpack_require__(7),
+	    add: __webpack_require__(8),
+	    dot: __webpack_require__(20),
+	    sub: __webpack_require__(10),
+	    scale: __webpack_require__(11),
+	    distance: __webpack_require__(21)
 	}
-	module.exports = __webpack_require__(18)(vec3)
+	module.exports = __webpack_require__(22)(vec3)
 
 /***/ },
-/* 16 */
+/* 20 */
 /***/ function(module, exports) {
 
 	module.exports = dot;
@@ -698,7 +702,7 @@
 	}
 
 /***/ },
-/* 17 */
+/* 21 */
 /***/ function(module, exports) {
 
 	module.exports = distance;
@@ -718,7 +722,7 @@
 	}
 
 /***/ },
-/* 18 */
+/* 22 */
 /***/ function(module, exports) {
 
 	module.exports = function(vec) {
@@ -793,18 +797,18 @@
 
 
 /***/ },
-/* 19 */
+/* 23 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var vec3 = {
-	    create: __webpack_require__(3),
-	    sub: __webpack_require__(6),
-	    copy: __webpack_require__(8)
+	    create: __webpack_require__(7),
+	    sub: __webpack_require__(10),
+	    copy: __webpack_require__(12)
 	}
-	module.exports = __webpack_require__(20)(vec3)
+	module.exports = __webpack_require__(24)(vec3)
 
 /***/ },
-/* 20 */
+/* 24 */
 /***/ function(module, exports) {
 
 	module.exports = function(vec) {
@@ -847,7 +851,7 @@
 	}
 
 /***/ },
-/* 21 */
+/* 25 */
 /***/ function(module, exports) {
 
 	module.exports = length;
