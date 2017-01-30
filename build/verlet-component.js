@@ -186,6 +186,9 @@
 			},
 			distance: {
 				default: ''
+			},
+			range: {
+				default: Infinity
 			}
 		},
 		init: function init() {
@@ -248,7 +251,11 @@
 										_this3.idPromises.push(Promise.all([i.components['verlet-point'].idPromise, j.components['verlet-point'].idPromise]).then(function (arr) {
 											var id1 = arr[0];
 											var id2 = arr[1];
-											return verletSystem.connectPoints(id1, id2, { stiffness: _this3.data.stiffness, restingDistance: _this3.data.restingDistance }).then(function (obj) {
+											return verletSystem.connectPoints(id1, id2, {
+												stiffness: _this3.data.stiffness,
+												restingDistance: _this3.data.restingDistance,
+												range: _this3.data.range
+											}).then(function (obj) {
 												return obj.constraintId;
 											});
 										}));
@@ -390,7 +397,8 @@
 			to: 'verlet-constraint.to',
 			from: 'verlet-constraint.from',
 			stiffness: 'verlet-constraint.stiffness',
-			distance: 'verlet-constraint.distance'
+			distance: 'verlet-constraint.distance',
+			range: 'verlet-constraint.range'
 		}
 	});
 

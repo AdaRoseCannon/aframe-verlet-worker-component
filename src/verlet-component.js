@@ -88,6 +88,9 @@ AFRAME.registerComponent('verlet-constraint', {
 		},
 		distance: {
 			default: ''
+		},
+		range: {
+			default: Infinity
 		}
 	},
 	init () {
@@ -134,7 +137,12 @@ AFRAME.registerComponent('verlet-constraint', {
 								.then(arr => {
 									const id1 = arr[0];
 									const id2 = arr[1];
-									return verletSystem.connectPoints(id1, id2, { stiffness: this.data.stiffness, restingDistance: this.data.restingDistance }).then(obj => obj.constraintId);
+									return verletSystem.connectPoints(id1, id2, {
+										stiffness: this.data.stiffness,
+										restingDistance: this.data.restingDistance,
+										range: this.data.range
+									})
+									.then(obj => obj.constraintId);
 								})
 							);
 						}
@@ -233,6 +241,7 @@ AFRAME.registerPrimitive('a-verlet-constraint', {
 		to: 'verlet-constraint.to',
 		from: 'verlet-constraint.from',
 		stiffness: 'verlet-constraint.stiffness',
-		distance: 'verlet-constraint.distance'
+		distance: 'verlet-constraint.distance',
+		range: 'verlet-constraint.range'
 	}
 })
