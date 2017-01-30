@@ -3,7 +3,7 @@ AFrame component for Performant Verlet Integration using Web Workers
 
 Usage add the script tag to the head of your document after the A-Frame script, e.g.
 
-```
+```html
 <script src="https://cdn.polyfill.io/v2/polyfill.min.js"></script>
 <script src="https://aframe.io/releases/0.4.0/aframe.min.js"></script>
 <script src="https://rawgit.com/AdaRoseEdwards/aframe-verlet-worker-component/master/build/verlet-component.js"></script>
