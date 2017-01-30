@@ -22,7 +22,7 @@
 				<script>
 					var out = '';
 					for (let i=0; i<10; i++) {
-						out += '<a-sphere radius="1" verlet-constraint="to: #anchor; distance: 2; stiffness: 0.2;" verlet-point="mass:1; radius: 0.5; attraction: 0.1; attractionRange: 0.6; position:' + Math.random() + ' ' + Math.random() + ' ' + Math.random() + ';" color="hsl(' + Math.random() * 360 + ', 80%, 60%)"></a-sphere>'
+						out += '<a-sphere radius="1" verlet-constraint="to: #anchor; distance: ' + (2 + 3*Math.random()) + '; stiffness: 0.2;" verlet-point="mass:1; radius: 0.5; attraction: 0.1; attractionRange: 0.6; position:' + Math.random() + ' ' + Math.random() + ' ' + Math.random() + ';" color="hsl(' + Math.random() * 360 + ', 80%, 60%)"></a-sphere>'
 					}
 					document.write(out);
 				</script>
