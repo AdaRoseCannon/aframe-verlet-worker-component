@@ -17,6 +17,9 @@ AFRAME.registerComponent('verlet-constraint', {
 		distance: {
 			default: ''
 		},
+		breakingDistance: {
+			default: ''
+		},
 		range: {
 			default: Infinity
 		}
@@ -38,6 +41,7 @@ AFRAME.registerComponent('verlet-constraint', {
 		this.remove().then(() => {
 			this.idPromises = this.idPromises || [];
 			this.data.restingDistance = this.data.distance ? Number(this.data.distance) : undefined;
+			this.data.breakingDistance = this.data.breakingDistance ? Number(this.data.breakingDistance) : undefined;
 			this.parentReadyPromise.then(verletSystem => {
 				if ((!this.data.from || !this.data.from.length)) {
 					if (this.el.matches('[verlet-point]')) {
@@ -68,7 +72,8 @@ AFRAME.registerComponent('verlet-constraint', {
 									return verletSystem.connectPoints(id1, id2, {
 										stiffness: this.data.stiffness,
 										restingDistance: this.data.restingDistance,
-										range: this.data.range
+										range: this.data.range,
+										breakingDistance: this.data.breakingDistance
 									})
 									.then(obj => obj.constraintId);
 								})

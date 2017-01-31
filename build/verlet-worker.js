@@ -203,7 +203,7 @@
 
 			var c = new Constraint3D([p1, p2], options);
 			c.range = options.range || Infinity;
-			c.breakingLength = options.breakingLength || Infinity;
+			c.breakingDistance = options.breakingDistance || Infinity;
 
 			c.id = idIncrementer++;
 			_this.constraints.push(c);
@@ -244,6 +244,9 @@
 		this.animate = function animate() {
 			var t = Date.now();
 
+			// set up first frame
+			if (oldT === 0) oldT = t - 16;
+
 			// Update arrays of points and constraints
 			if (this.needsUpdate) {
 				var _points, _constraints;
@@ -260,19 +263,22 @@
 			}
 
 			// don't bother calculating many times in a single batch
-			if (t - oldT < 3) {
+			if (t - oldT < 8) {
 				return;
 			}
 
-			var dT = Math.min(0.064, (t - oldT) / 1000);
+			var dT = (t - oldT) / 1000;
+			if (dT > 0.032) {
+				console.warn('Long frame: ' + dT);
+			}
 
 			for (var i = 0, l = this.constraints.length; i < l; i++) {
 				var c = this.constraints[i];
 
 				// if it has a range or a breaking point calculate whether it should skip or break
-				if (c.range && c.range !== Infinity || c.breakingLength && c.breakingLength !== Infinity) {
+				if (c.range && c.range !== Infinity || c.breakingDistance && c.breakingDistance !== Infinity) {
 					var distance = vec3.distance(c.points[0].position, c.points[1].position);
-					if (distance > c.breakingLength) {
+					if (distance > c.breakingDistance) {
 						this.removeConstraint(c.id);
 						continue;
 					};

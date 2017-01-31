@@ -1162,6 +1162,9 @@
 			distance: {
 				default: ''
 			},
+			breakingDistance: {
+				default: ''
+			},
 			range: {
 				default: Infinity
 			}
@@ -1188,6 +1191,7 @@
 			this.remove().then(function () {
 				_this.idPromises = _this.idPromises || [];
 				_this.data.restingDistance = _this.data.distance ? Number(_this.data.distance) : undefined;
+				_this.data.breakingDistance = _this.data.breakingDistance ? Number(_this.data.breakingDistance) : undefined;
 				_this.parentReadyPromise.then(function (verletSystem) {
 					if (!_this.data.from || !_this.data.from.length) {
 						if (_this.el.matches('[verlet-point]')) {
@@ -1229,7 +1233,8 @@
 											return verletSystem.connectPoints(id1, id2, {
 												stiffness: _this.data.stiffness,
 												restingDistance: _this.data.restingDistance,
-												range: _this.data.range
+												range: _this.data.range,
+												breakingDistance: _this.data.breakingDistance
 											}).then(function (obj) {
 												return obj.constraintId;
 											});
@@ -1692,7 +1697,7 @@
 				var _this4 = this;
 
 				return this.workerMessage({ action: 'addPoint', pointOptions: pointOptions }).then(function (result) {
-					if (result.length > 0.66 * _this4.maxPoints) {
+					if (result.length > 0.90 * _this4.maxPoints) {
 						_this4.setMaxPoints(_this4.maxPoints * 2);
 						console.log('Updated the memory space for the verlet points to hold ' + _this4.maxPoints + ' points.');
 					}

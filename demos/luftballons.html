@@ -14,20 +14,50 @@
 		<script src="../build/verlet-component.js"></script>
 	</head>
 	<body>
-		<a-scene>
+		<a-scene fog="color: #243e6b; density: 0.02; type: exponential;">
+
+			<a-assets>
+				<img id="cgsky" src="https://img.gs/bbdkhfbzkk/2048x1024,stretch/https://samsunginternet.github.io/a-frame-demos/a-frame-assets/sky/CGSkies_0347_free.jpg" crossorigin="anonymous">
+				<img id="grid" src="https://img.gs/bbdkhfbzkk/256x256,stretch/https://metaverse.samsunginter.net/images/congruent_outline.png" crossorigin="anonymous">
+				<img id="shadow" src="https://img.gs/bbdkhfbzkk/256x256,stretch/https://metaverse.samsunginter.net/images/shadow.png" crossorigin="anonymous">
+			</a-assets>
 
 			<!-- make all the items float up (like balloon) -->
-			<a-entity verlet-container="gravity: 0;" position="0 0 -5">
+			<a-entity verlet-container="floor: 0;" position="0 0 -7">
 				<a-entity id="anchor" verlet-point="mass: 0;"></a-entity>
 				<script>
 					var out = '';
-					for (let i=0; i<10; i++) {
-						out += '<a-sphere radius="1" id="balloon-' + i + '" verlet-constraint="to: #anchor; distance: ' + (2 + 3*Math.random()) + '; stiffness: 0.2;" verlet-point="mass:1; radius: 0.8; attraction: 0.5; attractionRange: contact; position:' + Math.random() + ' ' + Math.random() + ' ' + Math.random() + ';" color="hsl(' + Math.random() * 360 + ', 80%, 60%)"></a-sphere>'
+					for (let i=0; i<99; i++) {
+						var distance = (1 + 5*Math.random());
+						out += '<a-sphere radius="0.5" verlet-constraint="to: #anchor; distance: ' + distance + '; stiffness: 0.15;" verlet-point="mass:0.5; radius: 0.5; attraction: 0.5; attractionRange: contact; position:' + Math.random() + ' ' + Math.random() + ' ' + Math.random() + ';" color="hsl(' + Math.random() * 360 + ', 80%, 60%)" material="sphericalEnvMap: #cgsky; metalness: 0.4; roughness:0.4; transparent: true; opacity: 0.9;"></a-sphere>'
 					}
 					document.write(out);
 				</script>
-				<a-entity verlet-force="target: #balloon-0; vector: 0 100 0;"></a-entity>
+				<a-entity verlet-force="target: a-sphere; vector: 0 80 0;"></a-entity>
+
+
+				<a-entity id="shadow" position="0 -0.2 0" static-body="" geometry="primitive: plane; width: 3; height: 3;" rotation="-90 0 0" material="src: #shadow; transparent: true; shader: flat; opacity: 0.5;"></a-entity>
+				<a-entity id="floor" position="0 -0.2 0" static-body="" geometry="primitive: plane; width: 10000; height: 10000;" rotation="-90 0 0" material="src: #grid; repeat: 4000 4000; metalness:0.0; roughness: 1;"></a-entity>
+				<a-sky src="#cgsky" position="0 -1 0" rotation="0 -90 0" material="fog: false;"></a-sky>
 			</a-entity>
 		</a-scene>
+
+		<script>
+			var force = document.querySelector('[verlet-force]');
+			var balloons = Array.from(document.querySelectorAll('a-sphere'));
+
+			// make the wind blow erratically
+			setInterval(function () {
+				force.setAttribute('verlet-force', 'vector', -25 + 75 * Math.random() + ' 50 0');
+			}, 500);
+
+			// One by one allow the strings to break
+			setInterval(function () {
+				if (balloons.length) {
+					var balloon = balloons.pop();
+					balloon.setAttribute('verlet-constraint', 'breakingDistance', Number(balloon.getAttribute('verlet-constraint').distance) + 0.2);
+				}
+			}, 1000);
+		</script>
 	</body>
 </html>

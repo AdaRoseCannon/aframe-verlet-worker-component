@@ -130,7 +130,7 @@ function MyVerlet(options = {}) {
 
 		const c = new Constraint3D([p1, p2], options);
 		c.range = options.range || Infinity;
-		c.breakingLength = options.breakingLength || Infinity;
+		c.breakingDistance = options.breakingDistance || Infinity;
 
 		c.id = idIncrementer++;
 		this.constraints.push(c);
@@ -172,6 +172,9 @@ function MyVerlet(options = {}) {
 	this.animate = function animate() {
 		const t = Date.now();
 
+		// set up first frame
+		if (oldT === 0) oldT = t - 16;
+
 		// Update arrays of points and constraints
 		if (this.needsUpdate) {
 			this.points.splice(0);
@@ -184,11 +187,14 @@ function MyVerlet(options = {}) {
 		}
 
 		// don't bother calculating many times in a single batch
-		if (t - oldT < 3) {
+		if (t - oldT < 8) {
 			return;
 		}
 
-		const dT = Math.min(0.064, (t - oldT) / 1000);
+		const dT = (t - oldT) / 1000;
+		if (dT > 0.032) {
+			console.warn('Long frame: ' + dT);
+		}
 
 		for (let i = 0, l = this.constraints.length; i < l; i++) {
 			const c = this.constraints[i];
@@ -196,10 +202,10 @@ function MyVerlet(options = {}) {
 			// if it has a range or a breaking point calculate whether it should skip or break
 			if (
 				(c.range && c.range !== Infinity) ||
-				(c.breakingLength && c.breakingLength !== Infinity)
+				(c.breakingDistance && c.breakingDistance !== Infinity)
 			) {
 				const distance = vec3.distance(c.points[0].position, c.points[1].position);
-				if (distance > c.breakingLength) {
+				if (distance > c.breakingDistance) {
 					this.removeConstraint(c.id);
 					continue;
 				};

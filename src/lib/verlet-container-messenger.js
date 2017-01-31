@@ -154,7 +154,7 @@ class Verlet {
 	addPoint(pointOptions) {
 		return this.workerMessage({ action: 'addPoint', pointOptions })
 		.then(result => {
-			if (result.length > 0.66 * this.maxPoints) {
+			if (result.length > 0.90 * this.maxPoints) {
 				this.setMaxPoints(this.maxPoints * 2);
 				console.log('Updated the memory space for the verlet points to hold ' + this.maxPoints + ' points.');
 			}
