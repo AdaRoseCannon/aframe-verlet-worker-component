@@ -22,8 +22,12 @@
 				<img id="shadow" src="https://img.gs/bbdkhfbzkk/256x256,stretch/https://metaverse.samsunginter.net/images/shadow.png" crossorigin="anonymous">
 			</a-assets>
 
+			<a-sky src="#cgsky" rotation="0 -90 0" material="fog: false; depthTest: false;"></a-sky>
+			<a-entity id="floor" geometry="primitive: plane; width: 10000; height: 10000;" rotation="-90 0 0" material="src: #grid; repeat: 4000 4000; metalness:0.0; roughness: 1; depthTest: false;"></a-entity>
+
 			<!-- make all the items float up (like balloon) -->
 			<a-entity verlet-container="floor: 0;" position="0 0 -7">
+				<a-entity id="shadow" geometry="primitive: plane; width: 3; height: 3;" rotation="-90 0 0" material="src: #shadow; transparent: true; shader: flat; opacity: 0.5; depthTest: false;"></a-entity>
 				<a-entity id="anchor" verlet-point="mass: 0;"></a-entity>
 				<script>
 					var out = '';
@@ -36,9 +40,6 @@
 				<a-entity verlet-force="target: a-sphere; vector: 0 80 0;"></a-entity>
 
 
-				<a-entity id="shadow" position="0 -0.2 0" static-body="" geometry="primitive: plane; width: 3; height: 3;" rotation="-90 0 0" material="src: #shadow; transparent: true; shader: flat; opacity: 0.5;"></a-entity>
-				<a-entity id="floor" position="0 -0.2 0" static-body="" geometry="primitive: plane; width: 10000; height: 10000;" rotation="-90 0 0" material="src: #grid; repeat: 4000 4000; metalness:0.0; roughness: 1;"></a-entity>
-				<a-sky src="#cgsky" position="0 -1 0" rotation="0 -90 0" material="fog: false;"></a-sky>
 			</a-entity>
 		</a-scene>
 
