@@ -48,7 +48,11 @@
 
 	'use strict';
 
+	var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
 	var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
+
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 	function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
 
@@ -62,13 +66,8 @@
 	var Point3D = __webpack_require__(23);
 	var timeFactor = 1;
 	var vec3 = {
-		create: __webpack_require__(7),
-		add: __webpack_require__(8),
-		// dot: require('gl-vec3/dot'),
-		subtract: __webpack_require__(10),
-		scale: __webpack_require__(11),
 		distance: __webpack_require__(21),
-		length: __webpack_require__(25)
+		scaleAndAdd: __webpack_require__(26)
 	};
 
 	var VerletThreePoint = function VerletThreePoint(_ref) {
@@ -92,6 +91,7 @@
 		this.attraction = attraction;
 		this.attractionRange = attractionRange;
 		this.constraints = [];
+		this.forces = [];
 
 		this.verletPoint = new Point3D({
 			position: [position.x, position.y, position.z],
@@ -100,6 +100,35 @@
 			attraction: attraction
 		}).addForce([velocity.x, velocity.y, velocity.z]);
 	};
+
+	var VerletForce = function () {
+		function VerletForce(options) {
+			_classCallCheck(this, VerletForce);
+
+			this.update(options);
+			if (!this.vector) throw Error('Force Vector has not been defined');
+		}
+
+		_createClass(VerletForce, [{
+			key: 'update',
+			value: function update(_ref2) {
+				var vector = _ref2.vector;
+
+				if (vector) {
+					this.vector = [vector.x, vector.y, vector.z];
+				}
+			}
+		}, {
+			key: 'applyForce',
+			value: function applyForce(point) {
+
+				// work out acceleration due to force
+				vec3.scaleAndAdd(point.acceleration, point.acceleration, this.vector, 1.0 / point.mass);
+			}
+		}]);
+
+		return VerletForce;
+	}();
 
 	function MyVerlet() {
 		var _this = this;
@@ -111,6 +140,15 @@
 		this.pointMap = new Map();
 		this.constraints = [];
 		this.constraintMap = new Map();
+		this.forceMap = new Map();
+
+		this.addForce = function (options) {
+			var f = new VerletForce(options);
+			f.id = idIncrementer++;
+			_this.forceMap.set(f.id, f);
+
+			return f;
+		};
 
 		this.addPoint = function (options) {
 			var p = new VerletThreePoint(options);
@@ -161,6 +199,7 @@
 
 			var c = new Constraint3D([p1, p2], options);
 			c.range = options.range || Infinity;
+			c.breakingLength = options.breakingLength || Infinity;
 
 			c.id = idIncrementer++;
 			_this.constraints.push(c);
@@ -193,6 +232,7 @@
 		}
 
 		this.world = new World3D(worldOptions);
+		this.world.forces = [];
 
 		var oldT = 0;
 
@@ -222,12 +262,36 @@
 
 			for (var i = 0, l = this.constraints.length; i < l; i++) {
 				var c = this.constraints[i];
-				if (c.range && c.range !== Infinity && vec3.distance(c.points[0].position, c.points[1].position) > c.range) {
-					continue;
+
+				// if it has a range or a breaking point calculate whether it should skip or break
+				if (c.range && c.range !== Infinity || c.breakingLength && c.breakingLength !== Infinity) {
+					var distance = vec3.distance(c.points[0].position, c.points[1].position);
+					if (distance > c.breakingLength) {
+						this.removeConstraint(c.id);
+						continue;
+					};
+					if (distance > c.range) continue;
 				}
 				c.solve();
 			}
 
+			// handle forces
+			if (this.world.forces.length) {
+				for (var _i = 0, _l = this.points.length; _i < _l; _i++) {
+
+					// Apply any global forces
+					for (var j = 0, _l2 = this.world.forces; j < _l2; j++) {
+						this.world.forces[j].applyForce(this.points[_i]);
+					}
+
+					// Apply any individual forces
+					for (var _j = 0, _l3 = this.points[_i].forces; _j < _l3; _j++) {
+						this.points[_i].forces[_j].applyForce(this.points[_i]);
+					}
+				}
+			}
+
+			// step the simulation
 			this.world.integrate(this.points, dT * timeFactor);
 			oldT = t;
 		};
@@ -239,95 +303,147 @@
 	self.addEventListener('message', function (event) {
 
 		var transfer = [];
-		var data = event.data.map(function (_ref2) {
-			var _ref3 = _slicedToArray(_ref2, 2),
-			    id = _ref3[0],
-			    message = _ref3[1];
+		var data = event.data.map(function (_ref3) {
+			var _ref4 = _slicedToArray(_ref3, 2),
+			    id = _ref4[0],
+			    message = _ref4[1];
 
 			var i = message;
 
-			switch (i.action) {
-				case 'init':
-					verlet = new MyVerlet(i.options);
-					return { id: id };
+			var _ret = function () {
+				switch (i.action) {
+					case 'init':
+						verlet = new MyVerlet(i.options);
+						return {
+							v: { id: id }
+						};
 
-				case 'getPoints':
+					case 'getPoints':
 
-					// Use Float32Array to handle the data
-					var byteData = new Float32Array(i.byteData);
-					verlet.animate();
-					for (var j = 0, _i = 0, l = verlet.points.length; _i < l; _i++) {
-						var p = verlet.points[_i];
-						if (!p) continue;
-						byteData[j + 0] = p.id;
-						byteData[j + 1] = p.position[0];
-						byteData[j + 2] = p.position[1];
-						byteData[j + 3] = p.position[2];
-						j += 4;
-					}
+						// Use Float32Array to handle the data
+						var byteData = new Float32Array(i.byteData);
+						verlet.animate();
+						for (var j = 0, _i2 = 0, l = verlet.points.length; _i2 < l; _i2++) {
+							var p = verlet.points[_i2];
+							if (!p) continue;
+							byteData[j + 0] = p.id;
+							byteData[j + 1] = p.position[0];
+							byteData[j + 2] = p.position[1];
+							byteData[j + 3] = p.position[2];
+							j += 4;
+						}
 
-					transfer.push(byteData.buffer);
+						transfer.push(byteData.buffer);
 
-					return { id: id, byteData: byteData.buffer, length: verlet.points.length };
+						return {
+							v: { id: id, byteData: byteData.buffer, length: verlet.points.length }
+						};
 
-				// don't do anything just return the points
-				case 'noopPoints':
-					return { id: id, byteData: i.byteData, length: verlet.points.length };
+					// don't do anything just return the points
+					case 'noopPoints':
+						return {
+							v: { id: id, byteData: i.byteData, length: verlet.points.length }
+						};
 
-				case 'connectPoints':
-					var p1 = verlet.pointMap.get(i.options.id1);
-					var p2 = verlet.pointMap.get(i.options.id2);
-					var constraintId = verlet.connect(p1.verletPoint, p2.verletPoint, i.options.constraintOptions);
-					p1.constraints.push(constraintId);
-					p2.constraints.push(constraintId);
+					case 'createForce':
+						var newForce = verlet.addForce(i.forceOptions);
+						i.targets.forEach(function (id) {
+							if (id === 'world') return verlet.world.forces.push(newForce);
+							verlet.pointMap.get(id).forces.push(newForce);
+						});
+						return {
+							v: { id: id, forceId: newForce.id }
+						};
 
-					return {
-						id: id,
-						constraintId: constraintId
-					};
-				case 'removeConstraint':
-					verlet.removeConstraint(i.options.constraintId);
-					return { id: id };
+					case 'useForce':
+						var gotForce = verlet.forceMap.get(i.forceId);
+						i.targets.forEach(function (id) {
+							if (id === 'world') return verlet.world.forces.push(gotForce);
+							verlet.pointMap.get(id).forces.push(gotForce);
+						});
+						return {
+							v: { id: id, forceId: gotForce.id }
+						};
 
-				case 'updateConstraint':
-					var c = verlet.constraintMap.get(i.options.constraintId);
-					if (i.options.stiffness !== undefined) c.stiffness = i.options.stiffness;
-					if (i.options.restingDistance !== undefined) c.restingDistance = i.options.restingDistance;
-					return { id: id };
+					case 'updateForce':
+						verlet.forceMap.get(i.forceId).update(i.forceOptions);
+						return {
+							v: { id: id }
+						};
 
-				case 'addPoint':
-					return {
-						id: id,
-						point: verlet.addPoint(i.pointOptions),
-						length: verlet.points.length
-					};
+					case 'connectPoints':
+						var p1 = verlet.pointMap.get(i.options.id1);
+						var p2 = verlet.pointMap.get(i.options.id2);
+						var constraintId = verlet.connect(p1.verletPoint, p2.verletPoint, i.options.constraintOptions);
+						p1.constraints.push(constraintId);
+						p2.constraints.push(constraintId);
 
-				case 'removePoint':
-					verlet.removePoint(i.options.id);
-					return { id: id };
+						return {
+							v: {
+								id: id,
+								constraintId: constraintId
+							}
+						};
+					case 'removeConstraint':
+						verlet.removeConstraint(i.options.constraintId);
+						return {
+							v: { id: id }
+						};
 
-				case 'updatePoint':
-					var d = i.pointOptions;
-					var p3 = verlet.pointMap.get(d.id);
-					if (d.position !== undefined) p3.verletPoint.place([d.position.x, d.position.y, d.position.z]);
-					if (d.velocity !== undefined) p3.verletPoint.addForce([d.velocity.x, d.velocity.y, d.velocity.z]);
-					if (d.mass !== undefined) p3.verletPoint.mass = d.mass;
-					if (d.radius !== undefined) p3.verletPoint.radius = d.radius;
-					return { id: id };
+					case 'updateConstraint':
+						var c = verlet.constraintMap.get(i.options.constraintId);
+						if (i.options.stiffness !== undefined) c.stiffness = i.options.stiffness;
+						if (i.options.restingDistance !== undefined) c.restingDistance = i.options.restingDistance;
+						return {
+							v: { id: id }
+						};
 
-				case 'reset':
-					verlet.points.splice(0);
-					verlet.pointMap = new Map();
-					verlet.constraints.splice(0);
-					verlet.constraintMap = new Map();
-					return { id: id };
+					case 'addPoint':
+						return {
+							v: {
+								id: id,
+								point: verlet.addPoint(i.pointOptions),
+								length: verlet.points.length
+							}
+						};
 
-				default:
-					return {
-						error: 'Invalid Action: ' + i.action,
-						id: id
-					};
-			}
+					case 'removePoint':
+						verlet.removePoint(i.options.id);
+						return {
+							v: { id: id }
+						};
+
+					case 'updatePoint':
+						var d = i.pointOptions;
+						var p3 = verlet.pointMap.get(d.id);
+						if (d.position !== undefined) p3.verletPoint.place([d.position.x, d.position.y, d.position.z]);
+						if (d.velocity !== undefined) p3.verletPoint.addForce([d.velocity.x, d.velocity.y, d.velocity.z]);
+						if (d.mass !== undefined) p3.verletPoint.mass = d.mass;
+						if (d.radius !== undefined) p3.verletPoint.radius = d.radius;
+						return {
+							v: { id: id }
+						};
+
+					case 'reset':
+						verlet.points.splice(0);
+						verlet.pointMap = new Map();
+						verlet.constraints.splice(0);
+						verlet.constraintMap = new Map();
+						return {
+							v: { id: id }
+						};
+
+					default:
+						return {
+							v: {
+								error: 'Invalid Action: ' + i.action,
+								id: id
+							}
+						};
+				}
+			}();
+
+			if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
 		});
 
 		// deliver data by transfering data
@@ -859,22 +975,26 @@
 	}
 
 /***/ },
-/* 25 */
+/* 25 */,
+/* 26 */
 /***/ function(module, exports) {
 
-	module.exports = length;
+	module.exports = scaleAndAdd;
 
 	/**
-	 * Calculates the length of a vec3
+	 * Adds two vec3's after scaling the second operand by a scalar value
 	 *
-	 * @param {vec3} a vector to calculate length of
-	 * @returns {Number} length of a
+	 * @param {vec3} out the receiving vector
+	 * @param {vec3} a the first operand
+	 * @param {vec3} b the second operand
+	 * @param {Number} scale the amount to scale b by before adding
+	 * @returns {vec3} out
 	 */
-	function length(a) {
-	    var x = a[0],
-	        y = a[1],
-	        z = a[2]
-	    return Math.sqrt(x*x + y*y + z*z)
+	function scaleAndAdd(out, a, b, scale) {
+	    out[0] = a[0] + (b[0] * scale)
+	    out[1] = a[1] + (b[1] * scale)
+	    out[2] = a[2] + (b[2] * scale)
+	    return out
 	}
 
 /***/ }

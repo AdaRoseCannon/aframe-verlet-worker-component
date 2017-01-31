@@ -46,361 +46,11 @@
 
 	'use strict';
 	/* eslint-env commonjs, browser, es6 */
-	/* global AFRAME */
 
-	/* TODO Keep track of unused workers in the event of the container being destroyed so that they can be reused later. */
-
-	var _regenerator = __webpack_require__(1);
-
-	var _regenerator2 = _interopRequireDefault(_regenerator);
-
-	var start = function () {
-		var _ref = _asyncToGenerator(_regenerator2.default.mark(function _callee(options) {
-			var v;
-			return _regenerator2.default.wrap(function _callee$(_context) {
-				while (1) {
-					switch (_context.prev = _context.next) {
-						case 0:
-							v = options.workerUrl ? new Verlet(options.workerUrl) : new Verlet();
-							_context.next = 3;
-							return v.init(options);
-
-						case 3:
-							return _context.abrupt('return', v);
-
-						case 4:
-						case 'end':
-							return _context.stop();
-					}
-				}
-			}, _callee, this);
-		}));
-
-		return function start(_x) {
-			return _ref.apply(this, arguments);
-		};
-	}();
-
-	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-	function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
-
-	function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, arguments); return new Promise(function (resolve, reject) { function step(key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { return Promise.resolve(value).then(function (value) { step("next", value); }, function (err) { step("throw", err); }); } } return step("next"); }); }; }
-
-	var Verlet = __webpack_require__(5);
-
-	;
-
-	AFRAME.registerComponent('verlet-container', {
-		schema: {
-			gravity: {
-				default: -9.8
-			},
-			boxSize: {
-				default: 0
-			},
-			floor: {
-				default: -Infinity
-			},
-			workerUrl: {
-				default: ''
-			}
-		},
-		init: function init() {
-			var _this = this;
-
-			this.systemPromise = start(this.data).then(function (v) {
-				return _this.v = v;
-			});
-			this.systemPromise.then(function (v) {
-				return _this.el.emit('verlet-container-init-complete', v);
-			});
-			this.points = new Map();
-			this.updatePoints = this.updatePoints.bind(this);
-		},
-		update: function update() {
-			// TODO: Update verlet system without restarting worker
-		},
-		addPoint: function addPoint(component, data) {
-			var _this2 = this;
-
-			return this.systemPromise.then(function (v) {
-				return v.addPoint(data);
-			}).then(function (d) {
-				_this2.points.set(d.point.id, component);
-				return d.point.id;
-			});
-		},
-		removePoint: function removePoint(id) {
-			return this.systemPromise.then(function (v) {
-				return v.removePoint(id);
-			});
-		},
-		updatePoint: function updatePoint(id, data) {
-			var inData = { id: id };
-			Object.assign(inData, data);
-			return this.systemPromise.then(function (v) {
-				return v.updatePoint(inData);
-			});
-		},
-		connectPoints: function connectPoints(p1, p2, options) {
-			return this.systemPromise.then(function (v) {
-				return v.connectPoints(p1, p2, options);
-			});
-		},
-		removeConstraint: function removeConstraint(id) {
-			return this.systemPromise.then(function (v) {
-				return v.removeConstraint(id);
-			});
-		},
-		tick: function tick() {
-			if (!this.v) return;
-			this.v.getPoints().then(this.updatePoints);
-			this.v.process();
-		},
-		updatePoints: function updatePoints(_ref2) {
-			var byteData = _ref2.byteData,
-			    length = _ref2.length;
-
-			for (var i = 0, l = length; i < l; i += 1) {
-				var point = byteData[i * 4 + 0] && this.points.get(byteData[i * 4 + 0]);
-				if (!point) continue;
-				var pX = byteData[i * 4 + 1];
-				var pY = byteData[i * 4 + 2];
-				var pZ = byteData[i * 4 + 3];
-				point.setPosition(pX, pY, pZ);
-			}
-		}
-	});
-
-	AFRAME.registerComponent('verlet-constraint', {
-		schema: {
-			stiffness: {
-				default: 0.05
-			},
-			from: {
-				type: 'selectorAll'
-			},
-			to: {
-				type: 'selectorAll'
-			},
-			distance: {
-				default: ''
-			},
-			range: {
-				default: Infinity
-			}
-		},
-		init: function init() {
-			var el = this.el;
-			while (el && el.matches && !el.matches('[verlet-container]')) {
-				el = el.parentNode;
-			}if (el.components['verlet-container']) {
-				this.parentReadyPromise = Promise.resolve(el.components['verlet-container']);
-			} else {
-				this.parentReadyPromise = new Promise(function (r) {
-					return el.addEventListener('verlet-container-init-complete', function () {
-						return r(el.components['verlet-container']);
-					});
-				});
-			}
-			this.constraints = new Map();
-		},
-		update: function update() {
-			var _this3 = this;
-
-			// destroy everything then rebuild!
-			this.remove().then(function () {
-				_this3.idPromises = _this3.idPromises || [];
-				_this3.data.restingDistance = _this3.data.distance ? Number(_this3.data.distance) : undefined;
-				_this3.parentReadyPromise.then(function (verletSystem) {
-					if (!_this3.data.from || !_this3.data.from.length) {
-						if (_this3.el.matches('[verlet-point]')) {
-							_this3.data.from = [_this3.el];
-						} else {
-							_this3.data.from = [];
-						}
-					}
-
-					if (!_this3.data.to || !_this3.data.to.length) {
-						if (_this3.el.matches('[verlet-point]')) {
-							_this3.data.to = [_this3.el];
-						} else {
-							_this3.data.to = [];
-						}
-					}
-
-					var _iteratorNormalCompletion = true;
-					var _didIteratorError = false;
-					var _iteratorError = undefined;
-
-					try {
-						for (var _iterator = _this3.data.to[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-							var i = _step.value;
-							var _iteratorNormalCompletion2 = true;
-							var _didIteratorError2 = false;
-							var _iteratorError2 = undefined;
-
-							try {
-								for (var _iterator2 = _this3.data.from[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-									var j = _step2.value;
-
-									if (i !== j) {
-										if (!i.components['verlet-point'].idPromise) i.updateComponent('verlet-point');
-										if (!j.components['verlet-point'].idPromise) j.updateComponent('verlet-point');
-										_this3.idPromises.push(Promise.all([i.components['verlet-point'].idPromise, j.components['verlet-point'].idPromise]).then(function (arr) {
-											var id1 = arr[0];
-											var id2 = arr[1];
-											return verletSystem.connectPoints(id1, id2, {
-												stiffness: _this3.data.stiffness,
-												restingDistance: _this3.data.restingDistance,
-												range: _this3.data.range
-											}).then(function (obj) {
-												return obj.constraintId;
-											});
-										}));
-									}
-								}
-							} catch (err) {
-								_didIteratorError2 = true;
-								_iteratorError2 = err;
-							} finally {
-								try {
-									if (!_iteratorNormalCompletion2 && _iterator2.return) {
-										_iterator2.return();
-									}
-								} finally {
-									if (_didIteratorError2) {
-										throw _iteratorError2;
-									}
-								}
-							}
-						}
-					} catch (err) {
-						_didIteratorError = true;
-						_iteratorError = err;
-					} finally {
-						try {
-							if (!_iteratorNormalCompletion && _iterator.return) {
-								_iterator.return();
-							}
-						} finally {
-							if (_didIteratorError) {
-								throw _iteratorError;
-							}
-						}
-					}
-				});
-			});
-		},
-		remove: function remove() {
-			if (this.idPromises) {
-				return Promise.all([this.parentReadyPromise].concat(_toConsumableArray(this.idPromises))).then(function (arrOfIDs) {
-					// remove every constraint
-					var v = arrOfIDs.shift();
-					return Promise.all(arrOfIDs.map(function (id) {
-						return v.removeConstraint(id);
-					}));
-				});
-			} else {
-				return Promise.resolve();
-			}
-		}
-	});
-
-	AFRAME.registerComponent('verlet-point', {
-		schema: {
-			position: {
-				type: 'vec3'
-			},
-			velocity: {
-				type: 'vec3'
-			},
-			mass: {
-				default: 1
-			},
-			radius: {
-				default: 0
-			},
-			attraction: {
-				default: 0
-			},
-			attractionRange: {
-				default: 'contact'
-			}
-		},
-		init: function init() {
-			var _this4 = this;
-
-			var el = this.el;
-			while (el && el.matches && !el.matches('[verlet-container]')) {
-				el = el.parentNode;
-			}if (el.components['verlet-container']) {
-				this.parentReadyPromise = Promise.resolve(el.components['verlet-container']);
-			} else {
-				this.parentReadyPromise = new Promise(function (r) {
-					return el.addEventListener('verlet-container-init-complete', function () {
-						return r(el.components['verlet-container']);
-					});
-				});
-			}
-			this.parentReadyPromise.then(function (c) {
-				_this4.parentVerletComponent = c;
-			});
-			this.el.updateComponent('position');
-		},
-
-
-		// for processing data recieved from container
-		setPosition: function setPosition(x, y, z) {
-			this.el.object3D.position.x = x;
-			this.el.object3D.position.y = y;
-			this.el.object3D.position.z = z;
-		},
-		update: function update() {
-			var _this5 = this;
-
-			return this.parentReadyPromise.then(function (c) {
-
-				_this5.data.position = _this5.attrValue.position ? _this5.data.position : _this5.el.object3D.position;
-				if (!_this5.idPromise) {
-					_this5.idPromise = c.addPoint(_this5, _this5.data);
-					return _this5.idPromise;
-				} else {
-					return _this5.idPromise.then(function (id) {
-						return c.updatePoint(id, _this5.data);
-					});
-				}
-			});
-		},
-		remove: function remove() {
-			var _this6 = this;
-
-			return this.parentReadyPromise.then(function (c) {
-				if (_this6.idPromise) {
-					return _this6.idPromise.then(function (id) {
-						return c.removePoint(id);
-					});
-				} else {
-					return Promise.resolve();
-				}
-			});
-		}
-	});
-
-	AFRAME.registerPrimitive('a-verlet-constraint', {
-		defaultComponents: {
-			'verlet-constraint': {}
-		},
-
-		mappings: {
-			to: 'verlet-constraint.to',
-			from: 'verlet-constraint.from',
-			stiffness: 'verlet-constraint.stiffness',
-			distance: 'verlet-constraint.distance',
-			range: 'verlet-constraint.range'
-		}
-	});
+	__webpack_require__(27);
+	__webpack_require__(28);
+	__webpack_require__(29);
+	__webpack_require__(30);
 
 /***/ },
 /* 1 */
@@ -1324,7 +974,458 @@
 
 
 /***/ },
-/* 5 */
+/* 5 */,
+/* 6 */,
+/* 7 */,
+/* 8 */,
+/* 9 */,
+/* 10 */,
+/* 11 */,
+/* 12 */,
+/* 13 */,
+/* 14 */,
+/* 15 */,
+/* 16 */,
+/* 17 */,
+/* 18 */,
+/* 19 */,
+/* 20 */,
+/* 21 */,
+/* 22 */,
+/* 23 */,
+/* 24 */,
+/* 25 */,
+/* 26 */,
+/* 27 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	/* eslint-env commonjs, browser, es6 */
+	/* global AFRAME */
+
+	/* TODO Keep track of unused workers in the event of the container being destroyed so that they can be reused later. */
+
+	var _regenerator = __webpack_require__(1);
+
+	var _regenerator2 = _interopRequireDefault(_regenerator);
+
+	var start = function () {
+		var _ref = _asyncToGenerator(_regenerator2.default.mark(function _callee(options) {
+			var v;
+			return _regenerator2.default.wrap(function _callee$(_context) {
+				while (1) {
+					switch (_context.prev = _context.next) {
+						case 0:
+							v = options.workerUrl ? new Verlet(options.workerUrl) : new Verlet();
+							_context.next = 3;
+							return v.init(options);
+
+						case 3:
+							return _context.abrupt('return', v);
+
+						case 4:
+						case 'end':
+							return _context.stop();
+					}
+				}
+			}, _callee, this);
+		}));
+
+		return function start(_x) {
+			return _ref.apply(this, arguments);
+		};
+	}();
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+	function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, arguments); return new Promise(function (resolve, reject) { function step(key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { return Promise.resolve(value).then(function (value) { step("next", value); }, function (err) { step("throw", err); }); } } return step("next"); }); }; }
+
+	var Verlet = __webpack_require__(31);
+
+	;
+
+	AFRAME.registerComponent('verlet-container', {
+		schema: {
+			gravity: {
+				default: -9.8
+			},
+			boxSize: {
+				default: 0
+			},
+			floor: {
+				default: -Infinity
+			},
+			workerUrl: {
+				default: ''
+			}
+		},
+		init: function init() {
+			var _this = this;
+
+			this.systemPromise = start(this.data).then(function (v) {
+				return _this.v = v;
+			});
+			this.systemPromise.then(function (v) {
+				return _this.el.emit('verlet-container-init-complete', v);
+			});
+			this.points = new Map();
+			this.updatePoints = this.updatePoints.bind(this);
+		},
+		update: function update() {
+			// TODO: Update verlet system without restarting worker
+		},
+		addPoint: function addPoint(component, data) {
+			var _this2 = this;
+
+			return this.systemPromise.then(function (v) {
+				return v.addPoint(data);
+			}).then(function (d) {
+				_this2.points.set(d.point.id, component);
+				return d.point.id;
+			});
+		},
+		removePoint: function removePoint(id) {
+			return this.systemPromise.then(function (v) {
+				return v.removePoint(id);
+			});
+		},
+		updatePoint: function updatePoint(id, data) {
+			var inData = { id: id };
+			Object.assign(inData, data);
+			return this.systemPromise.then(function (v) {
+				return v.updatePoint(inData);
+			});
+		},
+		connectPoints: function connectPoints(p1, p2, options) {
+			return this.systemPromise.then(function (v) {
+				return v.connectPoints(p1, p2, options);
+			});
+		},
+		removeConstraint: function removeConstraint(id) {
+			return this.systemPromise.then(function (v) {
+				return v.removeConstraint(id);
+			});
+		},
+		tick: function tick() {
+			if (!this.v) return;
+			this.v.getPoints().then(this.updatePoints);
+			this.v.process();
+		},
+		updatePoints: function updatePoints(_ref2) {
+			var byteData = _ref2.byteData,
+			    length = _ref2.length;
+
+			for (var i = 0, l = length; i < l; i += 1) {
+				var point = byteData[i * 4 + 0] && this.points.get(byteData[i * 4 + 0]);
+				if (!point) continue;
+				var pX = byteData[i * 4 + 1];
+				var pY = byteData[i * 4 + 2];
+				var pZ = byteData[i * 4 + 3];
+				point.setPosition(pX, pY, pZ);
+			}
+		}
+	});
+
+/***/ },
+/* 28 */
+/***/ function(module, exports) {
+
+	'use strict';
+	/* eslint-env commonjs, browser, es6 */
+	/* global AFRAME */
+
+	function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
+
+	AFRAME.registerComponent('verlet-constraint', {
+		schema: {
+			stiffness: {
+				default: 0.05
+			},
+			from: {
+				type: 'selectorAll'
+			},
+			to: {
+				type: 'selectorAll'
+			},
+			distance: {
+				default: ''
+			},
+			range: {
+				default: Infinity
+			}
+		},
+		init: function init() {
+			var el = this.el;
+			while (el && el.matches && !el.matches('[verlet-container]')) {
+				el = el.parentNode;
+			}if (el.components['verlet-container']) {
+				this.parentReadyPromise = Promise.resolve(el.components['verlet-container']);
+			} else {
+				this.parentReadyPromise = new Promise(function (r) {
+					return el.addEventListener('verlet-container-init-complete', function () {
+						return r(el.components['verlet-container']);
+					});
+				});
+			}
+			this.constraints = new Map();
+		},
+		update: function update() {
+			var _this = this;
+
+			// destroy everything then rebuild!
+			this.remove().then(function () {
+				_this.idPromises = _this.idPromises || [];
+				_this.data.restingDistance = _this.data.distance ? Number(_this.data.distance) : undefined;
+				_this.parentReadyPromise.then(function (verletSystem) {
+					if (!_this.data.from || !_this.data.from.length) {
+						if (_this.el.matches('[verlet-point]')) {
+							_this.data.from = [_this.el];
+						} else {
+							_this.data.from = [];
+						}
+					}
+
+					if (!_this.data.to || !_this.data.to.length) {
+						if (_this.el.matches('[verlet-point]')) {
+							_this.data.to = [_this.el];
+						} else {
+							_this.data.to = [];
+						}
+					}
+
+					var _iteratorNormalCompletion = true;
+					var _didIteratorError = false;
+					var _iteratorError = undefined;
+
+					try {
+						for (var _iterator = _this.data.to[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+							var i = _step.value;
+							var _iteratorNormalCompletion2 = true;
+							var _didIteratorError2 = false;
+							var _iteratorError2 = undefined;
+
+							try {
+								for (var _iterator2 = _this.data.from[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+									var j = _step2.value;
+
+									if (i !== j) {
+										if (!i.components['verlet-point'].idPromise) i.updateComponent('verlet-point');
+										if (!j.components['verlet-point'].idPromise) j.updateComponent('verlet-point');
+										_this.idPromises.push(Promise.all([i.components['verlet-point'].idPromise, j.components['verlet-point'].idPromise]).then(function (arr) {
+											var id1 = arr[0];
+											var id2 = arr[1];
+											return verletSystem.connectPoints(id1, id2, {
+												stiffness: _this.data.stiffness,
+												restingDistance: _this.data.restingDistance,
+												range: _this.data.range
+											}).then(function (obj) {
+												return obj.constraintId;
+											});
+										}));
+									}
+								}
+							} catch (err) {
+								_didIteratorError2 = true;
+								_iteratorError2 = err;
+							} finally {
+								try {
+									if (!_iteratorNormalCompletion2 && _iterator2.return) {
+										_iterator2.return();
+									}
+								} finally {
+									if (_didIteratorError2) {
+										throw _iteratorError2;
+									}
+								}
+							}
+						}
+					} catch (err) {
+						_didIteratorError = true;
+						_iteratorError = err;
+					} finally {
+						try {
+							if (!_iteratorNormalCompletion && _iterator.return) {
+								_iterator.return();
+							}
+						} finally {
+							if (_didIteratorError) {
+								throw _iteratorError;
+							}
+						}
+					}
+				});
+			});
+		},
+		remove: function remove() {
+			if (this.idPromises) {
+				return Promise.all([this.parentReadyPromise].concat(_toConsumableArray(this.idPromises))).then(function (arrOfIDs) {
+					// remove every constraint
+					var v = arrOfIDs.shift();
+					return Promise.all(arrOfIDs.map(function (id) {
+						return v.removeConstraint(id);
+					}));
+				});
+			} else {
+				return Promise.resolve();
+			}
+		}
+	});
+
+	AFRAME.registerPrimitive('a-verlet-constraint', {
+		defaultComponents: {
+			'verlet-constraint': {}
+		},
+
+		mappings: {
+			to: 'verlet-constraint.to',
+			from: 'verlet-constraint.from',
+			stiffness: 'verlet-constraint.stiffness',
+			distance: 'verlet-constraint.distance',
+			range: 'verlet-constraint.range'
+		}
+	});
+
+/***/ },
+/* 29 */
+/***/ function(module, exports) {
+
+	'use strict';
+	/* eslint-env commonjs, browser, es6 */
+	/* global AFRAME */
+
+	AFRAME.registerComponent('verlet-force', {
+		schema: {
+			vector: {
+				type: 'vec3'
+			},
+			targets: {
+				type: 'selectorAll'
+			}
+		},
+		init: function init() {
+			var el = this.el;
+			while (el && el.matches && !el.matches('[verlet-container]')) {
+				el = el.parentNode;
+			}if (el.components['verlet-container']) {
+				this.parentReadyPromise = Promise.resolve(el.components['verlet-container']);
+			} else {
+				this.parentReadyPromise = new Promise(function (r) {
+					return el.addEventListener('verlet-container-init-complete', function () {
+						return r(el.components['verlet-container']);
+					});
+				});
+			}
+		},
+		update: function update() {
+			var _this = this;
+
+			return this.parentReadyPromise.then(function (c) {
+
+				_this.data.targets = _this.attrValue.targets ? _this.data.targets : [_this.el];
+				Promise.all(_this.data.targets.map(function (t) {
+					if (!t.components['verlet-point']) throw Error('Target is not a verlet-point');
+					if (!t.idPromise) t.updateComponent('verlet-point');
+					return t.idPromise;
+				})).then(function (ids) {
+					return console.log(ids);
+				});
+			});
+		},
+		remove: function remove() {
+			// mark to be expired worker will clean it up
+		}
+	});
+
+/***/ },
+/* 30 */
+/***/ function(module, exports) {
+
+	'use strict';
+	/* eslint-env commonjs, browser, es6 */
+	/* global AFRAME */
+
+	AFRAME.registerComponent('verlet-point', {
+		schema: {
+			position: {
+				type: 'vec3'
+			},
+			velocity: {
+				type: 'vec3'
+			},
+			mass: {
+				default: 1
+			},
+			radius: {
+				default: 0
+			},
+			attraction: {
+				default: 0
+			},
+			attractionRange: {
+				default: 'contact'
+			}
+		},
+		init: function init() {
+			var _this = this;
+
+			var el = this.el;
+			while (el && el.matches && !el.matches('[verlet-container]')) {
+				el = el.parentNode;
+			}if (el.components['verlet-container']) {
+				this.parentReadyPromise = Promise.resolve(el.components['verlet-container']);
+			} else {
+				this.parentReadyPromise = new Promise(function (r) {
+					return el.addEventListener('verlet-container-init-complete', function () {
+						return r(el.components['verlet-container']);
+					});
+				});
+			}
+			this.parentReadyPromise.then(function (c) {
+				_this.parentVerletComponent = c;
+			});
+			this.el.updateComponent('position');
+		},
+
+
+		// for processing data recieved from container
+		setPosition: function setPosition(x, y, z) {
+			this.el.object3D.position.x = x;
+			this.el.object3D.position.y = y;
+			this.el.object3D.position.z = z;
+		},
+		update: function update() {
+			var _this2 = this;
+
+			return this.parentReadyPromise.then(function (c) {
+
+				_this2.data.position = _this2.attrValue.position ? _this2.data.position : _this2.el.object3D.position;
+				if (!_this2.idPromise) {
+					_this2.idPromise = c.addPoint(_this2, _this2.data);
+					return _this2.idPromise;
+				} else {
+					return _this2.idPromise.then(function (id) {
+						return c.updatePoint(id, _this2.data);
+					});
+				}
+			});
+		},
+		remove: function remove() {
+			var _this3 = this;
+
+			return this.parentReadyPromise.then(function (c) {
+				if (_this3.idPromise) {
+					return _this3.idPromise.then(function (id) {
+						return c.removePoint(id);
+					});
+				} else {
+					return Promise.resolve();
+				}
+			});
+		}
+	});
+
+/***/ },
+/* 31 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -1560,10 +1661,25 @@
 				return this.workerMessage({ action: 'addPoint', pointOptions: pointOptions }).then(function (result) {
 					if (result.length > 0.66 * _this4.maxPoints) {
 						_this4.setMaxPoints(_this4.maxPoints * 2);
-						console.log('Updated the memory space for the verlet points to hold' + _this4.maxPoints + ' points.');
+						console.log('Updated the memory space for the verlet points to hold ' + _this4.maxPoints + ' points.');
 					}
 					return result;
 				});
+			}
+		}, {
+			key: 'createForce',
+			value: function createForce(forceOptions, targets) {
+				return this.workerMessage({ action: 'createForce', forceOptions: forceOptions, targets: targets });
+			}
+		}, {
+			key: 'useForce',
+			value: function useForce(forceId, targets) {
+				return this.workerMessage({ action: 'useForce', forceId: forceId, targets: targets });
+			}
+		}, {
+			key: 'updateForce',
+			value: function updateForce(forceId, forceOptions) {
+				return this.workerMessage({ action: 'updateForce', forceOptions: forceOptions });
 			}
 
 			/**

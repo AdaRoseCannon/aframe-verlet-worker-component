@@ -9,13 +9,8 @@ const Constraint3D = require('verlet-constraint/3d');
 const Point3D = require('verlet-point/3d');
 const timeFactor = 1;
 const vec3 = {
-    create: require('gl-vec3/create'),
-    add: require('gl-vec3/add'),
-    // dot: require('gl-vec3/dot'),
-    subtract: require('gl-vec3/subtract'),
-    scale: require('gl-vec3/scale'),
     distance: require('gl-vec3/distance'),
-    length: require('gl-vec3/length')
+	scaleAndAdd: require('gl-vec3/scaleAndAdd'),
 };
 
 class VerletThreePoint {
@@ -32,6 +27,7 @@ class VerletThreePoint {
 		this.attraction = attraction;
 		this.attractionRange = attractionRange;
 		this.constraints = [];
+		this.forces = [];
 
 		this.verletPoint = new Point3D({
 			position: [ position.x, position.y, position.z ],
@@ -42,12 +38,46 @@ class VerletThreePoint {
 	}
 }
 
+class VerletForce {
+	constructor(options) {
+		this.update(options);
+		if (!this.vector) throw Error('Force Vector has not been defined');
+	}
+
+	update({
+		vector
+	}) {
+		if (vector) {
+			this.vector = [
+				vector.x,
+				vector.y,
+				vector.z
+			];
+		}
+	}
+
+	applyForce(point) {
+
+		// work out acceleration due to force
+		vec3.scaleAndAdd(point.acceleration, point.acceleration, this.vector, 1.0 / point.mass);
+	}
+}
+
 function MyVerlet(options = {}) {
 
 	this.points = [];
 	this.pointMap = new Map();
 	this.constraints = [];
 	this.constraintMap = new Map();
+	this.forceMap = new Map();
+
+	this.addForce = options => {
+		const f = new VerletForce(options);
+		f.id = idIncrementer++;
+		this.forceMap.set(f.id, f);
+
+		return f;
+	}
 
 	this.addPoint = options => {
 		const p = new VerletThreePoint(options);
@@ -96,6 +126,7 @@ function MyVerlet(options = {}) {
 
 		const c = new Constraint3D([p1, p2], options);
 		c.range = options.range || Infinity;
+		c.breakingLength = options.breakingLength || Infinity;
 
 		c.id = idIncrementer++;
 		this.constraints.push(c);
@@ -129,6 +160,7 @@ function MyVerlet(options = {}) {
 	}
 
 	this.world = new World3D(worldOptions);
+	this.world.forces = [];
 
 	let oldT = 0;
 
@@ -154,20 +186,43 @@ function MyVerlet(options = {}) {
 
 		for (let i = 0, l = this.constraints.length; i < l; i++) {
 			const c = this.constraints[i];
-			if (c.range &&
-				c.range !== Infinity &&
-				vec3.distance(c.points[0].position, c.points[1].position) > c.range
+
+			// if it has a range or a breaking point calculate whether it should skip or break
+			if (
+				(c.range && c.range !== Infinity) ||
+				(c.breakingLength && c.breakingLength !== Infinity)
 			) {
-				continue;
+				const distance = vec3.distance(c.points[0].position, c.points[1].position);
+				if (distance > c.breakingLength) {
+					this.removeConstraint(c.id);
+					continue;
+				};
+				if (distance > c.range) continue;
 			}
 			c.solve();
 		}
 
+		// handle forces
+		if (this.world.forces.length) {
+			for (let i = 0, l = this.points.length; i < l; i++) {
+
+				// Apply any global forces
+				for (let j = 0, l = this.world.forces; j < l; j++) {
+					this.world.forces[j].applyForce(this.points[i]);
+				}
+
+				// Apply any individual forces
+				for (let j = 0, l = this.points[i].forces; j < l; j++) {
+					this.points[i].forces[j].applyForce(this.points[i]);
+				}
+			}
+		}
+
+		// step the simulation
 		this.world.integrate(this.points, dT * timeFactor);
 		oldT = t;
 	};
 }
-
 
 let verlet;
 
@@ -204,7 +259,27 @@ self.addEventListener('message', function(event) {
 
 			// don't do anything just return the points
 			case 'noopPoints':
-				return {id, byteData: i.byteData, length: verlet.points.length};
+				return { id, byteData: i.byteData, length: verlet.points.length };
+
+			case 'createForce':
+				const newForce = verlet.addForce(i.forceOptions);
+				i.targets.forEach(id => {
+					if (id === 'world') return verlet.world.forces.push(newForce);
+					verlet.pointMap.get(id).forces.push(newForce);
+				});
+				return { id, forceId: newForce.id };
+
+			case 'useForce':
+				const gotForce = verlet.forceMap.get(i.forceId);
+				i.targets.forEach(id => {
+					if (id === 'world') return verlet.world.forces.push(gotForce);
+					verlet.pointMap.get(id).forces.push(gotForce);
+				});
+				return { id, forceId: gotForce.id };
+
+			case 'updateForce':
+				verlet.forceMap.get(i.forceId).update(i.forceOptions);
+				return { id };
 
 			case 'connectPoints':
 				const p1 = verlet.pointMap.get(i.options.id1);
