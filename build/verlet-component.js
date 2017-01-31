@@ -1106,6 +1106,18 @@
 				return v.removeConstraint(id);
 			});
 		},
+		createForce: function createForce(options, targetIds) {
+			return this.systemPromise.then(function (v) {
+				return v.createForce(options, targetIds);
+			}).then(function (o) {
+				return o.forceId;
+			});
+		},
+		updateForce: function updateForce(id, options) {
+			return this.systemPromise.then(function (v) {
+				return v.updateForce(id, options);
+			});
+		},
 		tick: function tick() {
 			if (!this.v) return;
 			this.v.getPoints().then(this.updatePoints);
@@ -1298,7 +1310,7 @@
 			vector: {
 				type: 'vec3'
 			},
-			targets: {
+			target: {
 				type: 'selectorAll'
 			}
 		},
@@ -1315,21 +1327,39 @@
 					});
 				});
 			}
+			this.hasRequestedCreation = false;
 		},
 		update: function update() {
 			var _this = this;
 
-			return this.parentReadyPromise.then(function (c) {
+			var promise = this.parentReadyPromise.then(function (c) {
+				_this.data.target = _this.attrValue.target ? _this.data.target : [_this.el];
 
-				_this.data.targets = _this.attrValue.targets ? _this.data.targets : [_this.el];
-				Promise.all(_this.data.targets.map(function (t) {
-					if (!t.components['verlet-point']) throw Error('Target is not a verlet-point');
-					if (!t.idPromise) t.updateComponent('verlet-point');
-					return t.idPromise;
-				})).then(function (ids) {
-					return console.log(ids);
-				});
+				if (_this.hasRequestedCreation === false) {
+					_this.hasRequestedCreation = true;
+					var targetPromises = _this.data.target.map(function (t) {
+						if (t.components['verlet-container']) return Promise.resolve('world');
+
+						if (!t.components['verlet-point']) throw Error('Target is not a verlet-point or verlet-container');
+						if (!t.components['verlet-point'].idPromise) t.updateComponent('verlet-point');
+						return t.components['verlet-point'].idPromise;
+					});
+
+					return Promise.all(targetPromises).then(function (targetIds) {
+						return c.createForce({ vector: _this.data.vector }, targetIds);
+					});
+				} else {
+
+					return _this.idPromise.then(function (id) {
+						return c.updateForce(id, {
+							vector: _this.data.vector
+						});
+					});
+				}
 			});
+
+			if (!this.idPromise) this.idPromise = promise;
+			return this.idPromise;
 		},
 		remove: function remove() {
 			// mark to be expired worker will clean it up
@@ -1384,6 +1414,7 @@
 				_this.parentVerletComponent = c;
 			});
 			this.el.updateComponent('position');
+			this.hasRequestedPoint = false;
 		},
 
 
@@ -1396,18 +1427,20 @@
 		update: function update() {
 			var _this2 = this;
 
-			return this.parentReadyPromise.then(function (c) {
+			var promise = this.parentReadyPromise.then(function (c) {
 
 				_this2.data.position = _this2.attrValue.position ? _this2.data.position : _this2.el.object3D.position;
-				if (!_this2.idPromise) {
-					_this2.idPromise = c.addPoint(_this2, _this2.data);
-					return _this2.idPromise;
+				if (!_this2.hasRequestedPoint) {
+					_this2.hasRequestedPoint = true;
+					return c.addPoint(_this2, _this2.data);
 				} else {
 					return _this2.idPromise.then(function (id) {
 						return c.updatePoint(id, _this2.data);
 					});
 				}
 			});
+			if (!this.idPromise) this.idPromise = promise;
+			return this.idPromise;
 		},
 		remove: function remove() {
 			var _this3 = this;
@@ -1679,7 +1712,7 @@
 		}, {
 			key: 'updateForce',
 			value: function updateForce(forceId, forceOptions) {
-				return this.workerMessage({ action: 'updateForce', forceOptions: forceOptions });
+				return this.workerMessage({ action: 'updateForce', forceOptions: forceOptions, forceId: forceId });
 			}
 
 			/**

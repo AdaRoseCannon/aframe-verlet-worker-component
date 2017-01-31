@@ -58,6 +58,12 @@ AFRAME.registerComponent('verlet-container', {
 	removeConstraint(id) {
 		return this.systemPromise.then(v => v.removeConstraint(id));
 	},
+	createForce(options, targetIds) {
+		return this.systemPromise.then(v => v.createForce(options, targetIds)).then(o => o.forceId);
+	},
+	updateForce(id, options) {
+		return this.systemPromise.then(v => v.updateForce(id, options));
+	},
 	tick() {
 		if(!this.v) return;
 		this.v.getPoints().then(this.updatePoints);

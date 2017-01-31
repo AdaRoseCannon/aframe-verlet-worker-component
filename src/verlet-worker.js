@@ -28,13 +28,17 @@ class VerletThreePoint {
 		this.attractionRange = attractionRange;
 		this.constraints = [];
 		this.forces = [];
+		this.forceMap = new Map();
 
 		this.verletPoint = new Point3D({
 			position: [ position.x, position.y, position.z ],
 			mass,
 			radius,
 			attraction
-		}).addForce([ velocity.x, velocity.y, velocity.z ]);
+		}).addForce([velocity.x, velocity.y, velocity.z]);
+
+		this.verletPoint.forces = this.forces;
+		this.verletPoint.forceMap = this.forceMap;
 	}
 }
 
@@ -161,12 +165,14 @@ function MyVerlet(options = {}) {
 
 	this.world = new World3D(worldOptions);
 	this.world.forces = [];
+	this.world.forceMap = new Map();
 
 	let oldT = 0;
 
 	this.animate = function animate() {
 		const t = Date.now();
 
+		// Update arrays of points and constraints
 		if (this.needsUpdate) {
 			this.points.splice(0);
 			this.points.push(...Array.from(this.pointMap.values()).map(p => p.verletPoint));
@@ -202,19 +208,43 @@ function MyVerlet(options = {}) {
 			c.solve();
 		}
 
+		// Update arrays of forces on the world
+		if (this.world.needsForceUpdate) {
+			this.world.needsForceUpdate = false;
+			this.world.forces.splice(0);
+			this.world.forces.push(...this.world.forceMap.values());
+		}
+
 		// handle forces
-		if (this.world.forces.length) {
-			for (let i = 0, l = this.points.length; i < l; i++) {
+		for (let i = 0, l = this.points.length; i < l; i++) {
 
-				// Apply any global forces
-				for (let j = 0, l = this.world.forces; j < l; j++) {
-					this.world.forces[j].applyForce(this.points[i]);
-				}
+			const p = this.points[i];
 
-				// Apply any individual forces
-				for (let j = 0, l = this.points[i].forces; j < l; j++) {
-					this.points[i].forces[j].applyForce(this.points[i]);
+			// Update arrays of forces on each point if needed
+			if (p.needsForceUpdate) {
+				p.needsForceUpdate = false;
+				p.forces.splice(0);
+				p.forces.push(...p.forceMap.values());
+			}
+
+			// Apply any global forces
+			for (let j = 0, l = this.world.forces.length; j < l; j++) {
+				const force = this.world.forces[j];
+				if (force.expire) {
+					this.world.forceMap.delete(force.id);
+					continue;
 				}
+				force.applyForce(p);
+			}
+
+			// Apply any individual forces
+			for (let j = 0, l = p.forces.length; j < l; j++) {
+				const force = p.forces[j];
+				if (force.expire) {
+					p.forceMap.delete(force.id);
+					continue;
+				}
+				force.applyForce(p);
 			}
 		}
 
@@ -263,22 +293,39 @@ self.addEventListener('message', function(event) {
 
 			case 'createForce':
 				const newForce = verlet.addForce(i.forceOptions);
+				verlet.forceMap.set(newForce.id, newForce);
 				i.targets.forEach(id => {
-					if (id === 'world') return verlet.world.forces.push(newForce);
-					verlet.pointMap.get(id).forces.push(newForce);
+					if (id === 'world') {
+						verlet.world.forceMap.set(newForce.id, newForce);
+						verlet.world.needsForceUpdate = true;
+					} else {
+						const p = verlet.pointMap.get(id);
+						p.verletPoint.needsForceUpdate = true;
+						p.forceMap.set(newForce.id, newForce);
+					}
 				});
 				return { id, forceId: newForce.id };
 
 			case 'useForce':
 				const gotForce = verlet.forceMap.get(i.forceId);
 				i.targets.forEach(id => {
-					if (id === 'world') return verlet.world.forces.push(gotForce);
-					verlet.pointMap.get(id).forces.push(gotForce);
+					if (id === 'world') {
+						verlet.world.forceMap.set(gotForce.id, gotForce);
+						verlet.world.needsForceUpdate = true;
+					} else {
+						const p = verlet.pointMap.get(id);
+						p.needsForceUpdate = true;
+						p.forceMap.set(gotForce.id, gotForce);
+					}
 				});
 				return { id, forceId: gotForce.id };
 
 			case 'updateForce':
 				verlet.forceMap.get(i.forceId).update(i.forceOptions);
+				return { id };
+
+			case 'removeForce':
+				verlet.forceMap.get(i.forceId).expire = true;
 				return { id };
 
 			case 'connectPoints':

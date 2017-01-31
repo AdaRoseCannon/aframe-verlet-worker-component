@@ -92,6 +92,7 @@
 		this.attractionRange = attractionRange;
 		this.constraints = [];
 		this.forces = [];
+		this.forceMap = new Map();
 
 		this.verletPoint = new Point3D({
 			position: [position.x, position.y, position.z],
@@ -99,6 +100,9 @@
 			radius: radius,
 			attraction: attraction
 		}).addForce([velocity.x, velocity.y, velocity.z]);
+
+		this.verletPoint.forces = this.forces;
+		this.verletPoint.forceMap = this.forceMap;
 	};
 
 	var VerletForce = function () {
@@ -233,12 +237,14 @@
 
 		this.world = new World3D(worldOptions);
 		this.world.forces = [];
+		this.world.forceMap = new Map();
 
 		var oldT = 0;
 
 		this.animate = function animate() {
 			var t = Date.now();
 
+			// Update arrays of points and constraints
 			if (this.needsUpdate) {
 				var _points, _constraints;
 
@@ -275,19 +281,47 @@
 				c.solve();
 			}
 
+			// Update arrays of forces on the world
+			if (this.world.needsForceUpdate) {
+				var _world$forces;
+
+				this.world.needsForceUpdate = false;
+				this.world.forces.splice(0);
+				(_world$forces = this.world.forces).push.apply(_world$forces, _toConsumableArray(this.world.forceMap.values()));
+			}
+
 			// handle forces
-			if (this.world.forces.length) {
-				for (var _i = 0, _l = this.points.length; _i < _l; _i++) {
+			for (var _i = 0, _l = this.points.length; _i < _l; _i++) {
 
-					// Apply any global forces
-					for (var j = 0, _l2 = this.world.forces; j < _l2; j++) {
-						this.world.forces[j].applyForce(this.points[_i]);
-					}
+				var p = this.points[_i];
 
-					// Apply any individual forces
-					for (var _j = 0, _l3 = this.points[_i].forces; _j < _l3; _j++) {
-						this.points[_i].forces[_j].applyForce(this.points[_i]);
+				// Update arrays of forces on each point if needed
+				if (p.needsForceUpdate) {
+					var _p$forces;
+
+					p.needsForceUpdate = false;
+					p.forces.splice(0);
+					(_p$forces = p.forces).push.apply(_p$forces, _toConsumableArray(p.forceMap.values()));
+				}
+
+				// Apply any global forces
+				for (var j = 0, _l2 = this.world.forces.length; j < _l2; j++) {
+					var force = this.world.forces[j];
+					if (force.expire) {
+						this.world.forceMap.delete(force.id);
+						continue;
 					}
+					force.applyForce(p);
+				}
+
+				// Apply any individual forces
+				for (var _j = 0, _l3 = p.forces.length; _j < _l3; _j++) {
+					var _force = p.forces[_j];
+					if (_force.expire) {
+						p.forceMap.delete(_force.id);
+						continue;
+					}
+					_force.applyForce(p);
 				}
 			}
 
@@ -347,9 +381,16 @@
 
 					case 'createForce':
 						var newForce = verlet.addForce(i.forceOptions);
+						verlet.forceMap.set(newForce.id, newForce);
 						i.targets.forEach(function (id) {
-							if (id === 'world') return verlet.world.forces.push(newForce);
-							verlet.pointMap.get(id).forces.push(newForce);
+							if (id === 'world') {
+								verlet.world.forceMap.set(newForce.id, newForce);
+								verlet.world.needsForceUpdate = true;
+							} else {
+								var _p = verlet.pointMap.get(id);
+								_p.verletPoint.needsForceUpdate = true;
+								_p.forceMap.set(newForce.id, newForce);
+							}
 						});
 						return {
 							v: { id: id, forceId: newForce.id }
@@ -358,8 +399,14 @@
 					case 'useForce':
 						var gotForce = verlet.forceMap.get(i.forceId);
 						i.targets.forEach(function (id) {
-							if (id === 'world') return verlet.world.forces.push(gotForce);
-							verlet.pointMap.get(id).forces.push(gotForce);
+							if (id === 'world') {
+								verlet.world.forceMap.set(gotForce.id, gotForce);
+								verlet.world.needsForceUpdate = true;
+							} else {
+								var _p2 = verlet.pointMap.get(id);
+								_p2.needsForceUpdate = true;
+								_p2.forceMap.set(gotForce.id, gotForce);
+							}
 						});
 						return {
 							v: { id: id, forceId: gotForce.id }
@@ -367,6 +414,12 @@
 
 					case 'updateForce':
 						verlet.forceMap.get(i.forceId).update(i.forceOptions);
+						return {
+							v: { id: id }
+						};
+
+					case 'removeForce':
+						verlet.forceMap.get(i.forceId).expire = true;
 						return {
 							v: { id: id }
 						};

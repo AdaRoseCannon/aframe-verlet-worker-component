@@ -17,15 +17,16 @@
 		<a-scene>
 
 			<!-- make all the items float up (like balloon) -->
-			<a-entity verlet-container="gravity: 9.8;" position="0 0 -5">
+			<a-entity verlet-container="gravity: 0;" position="0 0 -5">
 				<a-entity id="anchor" verlet-point="mass: 0;"></a-entity>
 				<script>
 					var out = '';
 					for (let i=0; i<10; i++) {
-						out += '<a-sphere radius="1" verlet-constraint="to: #anchor; distance: ' + (2 + 3*Math.random()) + '; stiffness: 0.2;" verlet-point="mass:1; radius: 0.8; attraction: 0.5; attractionRange: contact; position:' + Math.random() + ' ' + Math.random() + ' ' + Math.random() + ';" color="hsl(' + Math.random() * 360 + ', 80%, 60%)"></a-sphere>'
+						out += '<a-sphere radius="1" id="balloon-' + i + '" verlet-constraint="to: #anchor; distance: ' + (2 + 3*Math.random()) + '; stiffness: 0.2;" verlet-point="mass:1; radius: 0.8; attraction: 0.5; attractionRange: contact; position:' + Math.random() + ' ' + Math.random() + ' ' + Math.random() + ';" color="hsl(' + Math.random() * 360 + ', 80%, 60%)"></a-sphere>'
 					}
 					document.write(out);
 				</script>
+				<a-entity verlet-force="target: #balloon-0; vector: 0 100 0;"></a-entity>
 			</a-entity>
 		</a-scene>
 	</body>

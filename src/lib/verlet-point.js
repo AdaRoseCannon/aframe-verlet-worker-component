@@ -36,6 +36,7 @@ AFRAME.registerComponent('verlet-point', {
 			this.parentVerletComponent = c;
 		});
 		this.el.updateComponent('position');
+		this.hasRequestedPoint = false;
 	},
 
 	// for processing data recieved from container
@@ -46,17 +47,18 @@ AFRAME.registerComponent('verlet-point', {
 	},
 
 	update() {
-
-		return this.parentReadyPromise.then(c => {
+		const promise = this.parentReadyPromise.then(c => {
 
 			this.data.position = this.attrValue.position ? this.data.position : this.el.object3D.position;
-			if (!this.idPromise) {
-				this.idPromise = c.addPoint(this, this.data);
-				return this.idPromise;
+			if (!this.hasRequestedPoint) {
+				this.hasRequestedPoint = true;
+				return c.addPoint(this, this.data);
 			} else {
 				return this.idPromise.then(id => c.updatePoint(id, this.data));
 			}
 		});
+		if (!this.idPromise) this.idPromise = promise;
+		return this.idPromise;
 	},
 
 	remove() {

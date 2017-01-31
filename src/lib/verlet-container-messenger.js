@@ -171,7 +171,7 @@ class Verlet {
 	}
 
 	updateForce(forceId, forceOptions) {
-		return this.workerMessage({ action: 'updateForce', forceOptions });
+		return this.workerMessage({ action: 'updateForce', forceOptions, forceId });
 	}
 
 	/**
