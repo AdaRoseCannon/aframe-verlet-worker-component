@@ -31,7 +31,8 @@
 				<a-entity id="anchor" verlet-point="mass: 0;"></a-entity>
 				<script>
 					var out = '';
-					for (let i=0; i<99; i++) {
+					var i;
+					for (i=0; i<99; i++) {
 						var distance = (1 + 5*Math.random());
 						out += '<a-sphere radius="0.5" verlet-constraint="to: #anchor; distance: ' + distance + '; stiffness: 0.15;" verlet-point="mass:0.5; radius: 0.5; attraction: 0.5; attractionRange: contact; position:' + Math.random() + ' ' + Math.random() + ' ' + Math.random() + ';" color="hsl(' + Math.random() * 360 + ', 80%, 60%)" material="sphericalEnvMap: #cgsky; metalness: 0.4; roughness:0.4; transparent: true; opacity: 0.9;"></a-sphere>'
 					}
