@@ -150,7 +150,7 @@ function MyVerlet(options = {}) {
 
 	const worldOptions = {
 		gravity: options.gravity ? [0, options.gravity, 0] : undefined,
-		friction: 0.99
+		friction: options.friction || 0.99
 	};
 
 	if (options.boxSize) {
@@ -191,7 +191,7 @@ function MyVerlet(options = {}) {
 			return;
 		}
 
-		const dT = (t - oldT) / 1000;
+		let dT = (t - oldT) / 1000;
 		if (dT > 0.032) {
 			console.warn('Long frame: ' + dT);
 
@@ -348,6 +348,7 @@ self.addEventListener('message', function(event) {
 					id,
 					constraintId
 				};
+
 			case 'removeConstraint':
 				verlet.removeConstraint(i.options.constraintId);
 				return { id };

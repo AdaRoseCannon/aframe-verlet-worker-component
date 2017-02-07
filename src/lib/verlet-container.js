@@ -25,6 +25,9 @@ AFRAME.registerComponent('verlet-container', {
 		},
 		workerUrl: {
 			default: ''
+		},
+		friction: {
+			default: 0.99
 		}
 	},
 	init () {

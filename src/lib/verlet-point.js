@@ -2,7 +2,6 @@
 /* eslint-env commonjs, browser, es6 */
 /* global AFRAME */
 
-
 AFRAME.registerComponent('verlet-point', {
 	schema: {
 		position: {
@@ -22,9 +21,12 @@ AFRAME.registerComponent('verlet-point', {
 		},
 		attractionRange: {
 			default: 'contact'
+		},
+		syncPosition: {
+			default: false
 		}
 	},
-	init () {
+	init() {
 		let el = this.el;
 		while (el && el.matches && !el.matches('[verlet-container]')) el = el.parentNode;
 		if (el.components['verlet-container']) {
@@ -37,31 +39,52 @@ AFRAME.registerComponent('verlet-point', {
 		});
 		this.el.updateComponent('position');
 		this.hasRequestedPoint = false;
+		this.parentVerletElement = el;
+		this.tempVector = new AFRAME.THREE.Vector3();
 	},
 
 	// for processing data recieved from container
 	setPosition(x, y, z) {
+
+		// We are updating the data in the simulation so ignore return results
+		if (this.data.syncPosition) return;
+
 		this.el.object3D.position.x = x;
 		this.el.object3D.position.y = y;
 		this.el.object3D.position.z = z;
 	},
 
 	update() {
+		if (this.data.syncPosition && this.data.mass !== 0) {
+			throw Error('Can only sync position if the mass is 0');
+		}
 		const promise = this.parentReadyPromise.then(c => {
 
-			this.data.position = this.attrValue.position ? this.data.position : this.el.object3D.position;
+			this.data.position = this.attrValue.position ? this.data.position : this.parentVerletElement.object3D.worldToLocal(this.el.object3D.getWorldPosition());
 			if (!this.hasRequestedPoint) {
 				this.hasRequestedPoint = true;
-				return c.addPoint(this, this.data);
+				return c.addPoint(this, this.data).then(id => this.id = id);
 			} else {
-				return this.idPromise.then(id => c.updatePoint(id, this.data));
+				return this.idPromise.then(id => {
+					c.updatePoint(id, this.data);
+					return id;
+				});
 			}
 		});
 		if (!this.idPromise) this.idPromise = promise;
 		return this.idPromise;
 	},
 
+	tick() {
+		if (this.data.syncPosition && this.parentVerletComponent && this.id) {
+			this.parentVerletComponent.updatePoint(this.id, {
+				position: this.parentVerletElement.object3D.worldToLocal(this.el.object3D.getWorldPosition(this.tempVector))
+			});
+		}
+	},
+
 	remove() {
+		this.id = undefined;
 		return this.parentReadyPromise.then(c => {
 			if (this.idPromise) {
 				return this.idPromise.then(id => c.removePoint(id));

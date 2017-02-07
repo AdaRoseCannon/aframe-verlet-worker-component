@@ -114,6 +114,9 @@
 			},
 			workerUrl: {
 				default: ''
+			},
+			friction: {
+				default: 0.99
 			}
 		},
 		init: function init() {
@@ -1680,6 +1683,9 @@
 			},
 			attractionRange: {
 				default: 'contact'
+			},
+			syncPosition: {
+				default: false
 			}
 		},
 		init: function init() {
@@ -1702,11 +1708,17 @@
 			});
 			this.el.updateComponent('position');
 			this.hasRequestedPoint = false;
+			this.parentVerletElement = el;
+			this.tempVector = new AFRAME.THREE.Vector3();
 		},
 
 
 		// for processing data recieved from container
 		setPosition: function setPosition(x, y, z) {
+
+			// We are updating the data in the simulation so ignore return results
+			if (this.data.syncPosition) return;
+
 			this.el.object3D.position.x = x;
 			this.el.object3D.position.y = y;
 			this.el.object3D.position.z = z;
@@ -1714,24 +1726,38 @@
 		update: function update() {
 			var _this2 = this;
 
+			if (this.data.syncPosition && this.data.mass !== 0) {
+				throw Error('Can only sync position if the mass is 0');
+			}
 			var promise = this.parentReadyPromise.then(function (c) {
 
-				_this2.data.position = _this2.attrValue.position ? _this2.data.position : _this2.el.object3D.position;
+				_this2.data.position = _this2.attrValue.position ? _this2.data.position : _this2.parentVerletElement.object3D.worldToLocal(_this2.el.object3D.getWorldPosition());
 				if (!_this2.hasRequestedPoint) {
 					_this2.hasRequestedPoint = true;
-					return c.addPoint(_this2, _this2.data);
+					return c.addPoint(_this2, _this2.data).then(function (id) {
+						return _this2.id = id;
+					});
 				} else {
 					return _this2.idPromise.then(function (id) {
-						return c.updatePoint(id, _this2.data);
+						c.updatePoint(id, _this2.data);
+						return id;
 					});
 				}
 			});
 			if (!this.idPromise) this.idPromise = promise;
 			return this.idPromise;
 		},
+		tick: function tick() {
+			if (this.data.syncPosition && this.parentVerletComponent && this.id) {
+				this.parentVerletComponent.updatePoint(this.id, {
+					position: this.parentVerletElement.object3D.worldToLocal(this.el.object3D.getWorldPosition(this.tempVector))
+				});
+			}
+		},
 		remove: function remove() {
 			var _this3 = this;
 
+			this.id = undefined;
 			return this.parentReadyPromise.then(function (c) {
 				if (_this3.idPromise) {
 					return _this3.idPromise.then(function (id) {

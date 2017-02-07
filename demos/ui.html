@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<title>AFrame Verlet Demo</title>
+		<meta name="description" content="">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<script src="https://cdn.polyfill.io/v2/polyfill.min.js"></script>
+ 		<script src="https://aframe.io/releases/0.4.0/aframe.min.js"></script>
+		<script src="../build/verlet-component.js"></script>
+	</head>
+	<body>
+		<a-scene fog="color: #243e6b; density: 0.02; type: exponential;">
+
+			<a-assets>
+				<img id="cgsky" src="https://img.gs/bbdkhfbzkk/2048x1024,stretch/https://samsunginternet.github.io/a-frame-demos/a-frame-assets/sky/CGSkies_0347_free.jpg" crossorigin="anonymous">
+				<img id="grid" src="https://img.gs/bbdkhfbzkk/256x256,stretch/https://metaverse.samsunginter.net/images/congruent_outline.png" crossorigin="anonymous">
+				<img id="shadow" src="https://img.gs/bbdkhfbzkk/256x256,stretch/https://metaverse.samsunginter.net/images/shadow.png" crossorigin="anonymous">
+			</a-assets>
+
+			<a-sky src="#cgsky" rotation="0 -90 0" material="fog: false; depthTest: false;"></a-sky>
+			<a-entity id="floor" geometry="primitive: plane; width: 1000; height: 1000;" rotation="-90 0 0" material="src: #grid; repeat: 400 400; metalness:0.0; roughness: 1; depthTest: false;"></a-entity>
+
+			<a-entity verlet-container="floor: 0; gravity: 0; friction: 0.8;">
+				<a-entity class="anchor" id="anchor1" verlet-point="mass: 0;" geometry="primitive:sphere; radius: 0.3;" material="color: red;" position="-2 1 -4.5" ></a-entity>
+				<a-entity class="anchor" id="anchor2" verlet-point="mass: 0;" geometry="primitive:sphere; radius: 0.3;" material="color: blue;" position="0 1 -5" ></a-entity>
+				<a-entity class="anchor" id="anchor3" verlet-point="mass: 0;" geometry="primitive:sphere; radius: 0.3;" material="color: yellow;" position="2 1 -4.5" ></a-entity>
+				<a-entity id="float" verlet-point="mass:1;" position="0 3 -5" geometry="primitive:sphere; radius: 0.4;" material="color: green; opacity: 0.5; transparent: true;" ></a-entity>
+
+				<a-camera>
+					<a-entity id="camera-anchor" geometry="primitive:torus;" scale="0.2 0.2 0.2" verlet-point="mass: 0; sync-position: true;" position="0 0 -5" ></a-entity>
+				</a-camera>
+
+				<a-verlet-constraint from=".anchor"        to="#float" distance="0" stiffness="0.4" range="0.3"></a-verlet-constraint>
+				<a-verlet-constraint from="#camera-anchor" to="#float" distance="0" stiffness="0.1"></a-verlet-constraint>
+
+			</a-entity>
+		</a-scene>
+
+		<script>
+
+		</script>
+
+	</body>
+</html>
