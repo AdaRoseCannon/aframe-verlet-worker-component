@@ -58,16 +58,18 @@ AFRAME.registerSystem('grabber-tracking', {
 			this.currentObject.emit('grabber-click');
 		}
 	},
-	dragStart: function () {
+	dragStart: function (e) {
 		if (this.currentObject !== null) {
 			this.grabEl = this.currentObject;
 			this.currentObject.emit('grabber-drag-start');
+			e.preventDefault();
 		}
 	},
-	dragEnd: function () {
+	dragEnd: function (e) {
 		if (this.grabEl) {
 			this.grabEl.emit('grabber-drag-end');
 			this.grabEl = null;
+			e.preventDefault();
 		}
 	},
 	tick: function () {
