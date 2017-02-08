@@ -33,9 +33,9 @@
 			<a-entity id="floor" geometry="primitive: plane; width: 1000; height: 1000;" rotation="-90 0 0" material="src: #grid; repeat: 400 400; metalness:0.0; roughness: 1; depthTest: false;"></a-entity>
 
 			<a-entity verlet-container="floor: 0; gravity: 0; friction: 0.8;">
-				<a-entity class="anchor" id="anchor1" verlet-point="mass: 0;" geometry="primitive:sphere; radius: 0.3;" material="color: red;" position="-2 1 -4.5" ></a-entity>
-				<a-entity class="anchor" id="anchor2" verlet-point="mass: 0;" geometry="primitive:sphere; radius: 0.3;" material="color: blue;" position="0 1 -5" ></a-entity>
-				<a-entity class="anchor" id="anchor3" verlet-point="mass: 0;" geometry="primitive:sphere; radius: 0.3;" material="color: green;" position="2 1 -4.5" ></a-entity>
+				<a-entity class="color-selector-anchor" id="color-red" verlet-point="mass: 0;" geometry="primitive:sphere; radius: 0.3;" material="color: red;" position="-2 1 -4.5" ></a-entity>
+				<a-entity class="color-selector-anchor" id="color-blue" verlet-point="mass: 0;" geometry="primitive:sphere; radius: 0.3;" material="color: blue;" position="0 1 -5" ></a-entity>
+				<a-entity class="color-selector-anchor" id="color-green" verlet-point="mass: 0;" geometry="primitive:sphere; radius: 0.3;" material="color: green;" position="2 1 -4.5" ></a-entity>
 
 				<!-- something that is able to be grabbed used for selecting colours, it attracts the grabber -->
 				<!-- The verlet-constraint distance should be the same as the radius to make it stick to the outside -->
@@ -57,7 +57,7 @@
 				</a-entity>
 
 				<!-- Make our floating object stick to the 3 options -->
-				<a-verlet-constraint from=".anchor"   to="#float" stiffness="0.4" range="1"></a-verlet-constraint>
+				<a-verlet-constraint from=".color-selector-anchor"   to="#float" stiffness="0.4" range="1"></a-verlet-constraint>
 
 				<a-camera>
 
@@ -73,10 +73,12 @@
 
 			</a-entity>
 
-			<a-entity obj-model="obj: #ship-obj;" material="src: #ship-src-blue; normalMcale: 2; normalMap: #ship-normal; metalness:0.5; roughness: 0; sphericalEnvMap: #cgsky;" position="0 1 -13" rotation="1 -75 -5"></a-entity>
+			<a-entity id="ship" obj-model="obj: #ship-obj;" material="src: #ship-src-blue; normalMcale: 2; normalMap: #ship-normal; metalness:0.5; roughness: 0; sphericalEnvMap: #cgsky;" position="0 1 -13" rotation="1 -75 -5"></a-entity>
 		</a-scene>
 
 		<script>
+
+			// Set up being able to drag and pull the dragable object
 			var cameraAnchor = document.getElementById('camera-anchor');
 			function setConstraint() {
 				cameraAnchor.setAttribute('verlet-constraint','to','#' + this.id);
@@ -89,7 +91,21 @@
 				el.addEventListener('grabber-drag-end', removeConstraint);
 			});
 
+			var ship = document.getElementById('ship');
 
+			// Set up changing the colour with float
+			var float = document.getElementById('float');
+			var options = Array.from(document.querySelectorAll('.color-selector-anchor'));
+			float.addEventListener('grabber-drag-end', function () {
+				options.sort(function (a,b) {
+					var distanceToA = float.object3D.position.distanceToSquared(a.object3D.position);
+					var distanceToB = float.object3D.position.distanceToSquared(b.object3D.position);
+					return distanceToA - distanceToB
+				});
+				if (options[0].id === 'color-green') ship.setAttribute('material', 'src', '#ship-src-green');
+				if (options[0].id === 'color-blue') ship.setAttribute('material', 'src', '#ship-src-blue');
+				if (options[0].id === 'color-red') ship.setAttribute('material', 'src', '#ship-src-red');
+			});
 		</script>
 
 	</body>
