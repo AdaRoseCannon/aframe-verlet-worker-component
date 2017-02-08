@@ -15,9 +15,14 @@ AFRAME.registerComponent('verlet-constraint', {
 			type: 'selectorAll'
 		},
 		distance: {
-			default: ''
+
+			// ideal length of the constraint it will try to maintain this
+			default: 0
 		},
 		breakingDistance: {
+
+			// like range but won't will destroy itself after breaking
+			// Element will remain
 			default: ''
 		},
 		range: {
@@ -40,7 +45,7 @@ AFRAME.registerComponent('verlet-constraint', {
 		// destroy everything then rebuild!
 		this.remove().then(() => {
 			this.idPromises = this.idPromises || [];
-			this.data.restingDistance = this.data.distance ? Number(this.data.distance) : undefined;
+			this.data.restingDistance = this.data.distance;
 			this.data.breakingDistance = this.data.breakingDistance ? Number(this.data.breakingDistance) : undefined;
 			this.parentReadyPromise.then(verletSystem => {
 				if ((!this.data.from || !this.data.from.length)) {

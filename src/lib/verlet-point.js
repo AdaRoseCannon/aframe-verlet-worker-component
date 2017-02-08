@@ -40,7 +40,6 @@ AFRAME.registerComponent('verlet-point', {
 		this.el.updateComponent('position');
 		this.hasRequestedPoint = false;
 		this.parentVerletElement = el;
-		this.tempVector = new AFRAME.THREE.Vector3();
 	},
 
 	// for processing data recieved from container
@@ -77,8 +76,11 @@ AFRAME.registerComponent('verlet-point', {
 
 	tick() {
 		if (this.data.syncPosition && this.parentVerletComponent && this.id) {
+			if (!this.worldPosition) {
+				this.worldPosition = new AFRAME.THREE.Vector3();
+			}
 			this.parentVerletComponent.updatePoint(this.id, {
-				position: this.parentVerletElement.object3D.worldToLocal(this.el.object3D.getWorldPosition(this.tempVector))
+				position: this.parentVerletElement.object3D.worldToLocal(this.el.object3D.getWorldPosition(this.worldPosition))
 			});
 		}
 	},

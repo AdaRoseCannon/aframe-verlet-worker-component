@@ -193,7 +193,7 @@ function MyVerlet(options = {}) {
 
 		let dT = (t - oldT) / 1000;
 		if (dT > 0.032) {
-			console.warn('Long frame: ' + dT);
+			// console.warn('Long frame: ' + dT);
 
 			// It's okay to skip frames but just slow down the simulation
 			dT = 0.032;

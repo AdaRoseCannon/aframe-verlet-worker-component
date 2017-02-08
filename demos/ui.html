@@ -12,6 +12,7 @@
 		<script src="https://cdn.polyfill.io/v2/polyfill.min.js"></script>
  		<script src="https://aframe.io/releases/0.4.0/aframe.min.js"></script>
 		<script src="../build/verlet-component.js"></script>
+		<script src="./ui-components.js"></script>
 	</head>
 	<body>
 		<a-scene fog="color: #243e6b; density: 0.02; type: exponential;">
@@ -20,6 +21,12 @@
 				<img id="cgsky" src="https://img.gs/bbdkhfbzkk/2048x1024,stretch/https://samsunginternet.github.io/a-frame-demos/a-frame-assets/sky/CGSkies_0347_free.jpg" crossorigin="anonymous">
 				<img id="grid" src="https://img.gs/bbdkhfbzkk/256x256,stretch/https://metaverse.samsunginter.net/images/congruent_outline.png" crossorigin="anonymous">
 				<img id="shadow" src="https://img.gs/bbdkhfbzkk/256x256,stretch/https://metaverse.samsunginter.net/images/shadow.png" crossorigin="anonymous">
+
+				<a-asset-item id="ship-obj" src="https://cdn.rawgit.com/SamsungInternet/a-frame-demos/gh-pages/a-frame-assets/Feisar_Ship_OBJ/Feisar_Ship.obj"></a-asset-item>
+				<img id="ship-src-blue" crossorigin="anonymous" src="https://cdn.rawgit.com/SamsungInternet/a-frame-demos/gh-pages/a-frame-assets/Feisar_Ship_OBJ/maps/diffuse.jpg">
+				<img id="ship-src-green" crossorigin="anonymous" src="https://cdn.rawgit.com/SamsungInternet/a-frame-demos/gh-pages/a-frame-assets/Feisar_Ship_OBJ/maps/diffuse_green.jpg">
+				<img id="ship-src-red" crossorigin="anonymous" src="https://cdn.rawgit.com/SamsungInternet/a-frame-demos/gh-pages/a-frame-assets/Feisar_Ship_OBJ/maps/diffuse_red.jpg">
+				<img id="ship-normal" crossorigin="anonymous" src="https://cdn.rawgit.com/SamsungInternet/a-frame-demos/gh-pages/a-frame-assets/Feisar_Ship_OBJ/maps/normal.jpg">
 			</a-assets>
 
 			<a-sky src="#cgsky" rotation="0 -90 0" material="fog: false; depthTest: false;"></a-sky>
@@ -28,20 +35,60 @@
 			<a-entity verlet-container="floor: 0; gravity: 0; friction: 0.8;">
 				<a-entity class="anchor" id="anchor1" verlet-point="mass: 0;" geometry="primitive:sphere; radius: 0.3;" material="color: red;" position="-2 1 -4.5" ></a-entity>
 				<a-entity class="anchor" id="anchor2" verlet-point="mass: 0;" geometry="primitive:sphere; radius: 0.3;" material="color: blue;" position="0 1 -5" ></a-entity>
-				<a-entity class="anchor" id="anchor3" verlet-point="mass: 0;" geometry="primitive:sphere; radius: 0.3;" material="color: yellow;" position="2 1 -4.5" ></a-entity>
-				<a-entity id="float" verlet-point="mass:1;" position="0 3 -5" geometry="primitive:sphere; radius: 0.4;" material="color: green; opacity: 0.5; transparent: true;" ></a-entity>
+				<a-entity class="anchor" id="anchor3" verlet-point="mass: 0;" geometry="primitive:sphere; radius: 0.3;" material="color: green;" position="2 1 -4.5" ></a-entity>
+
+				<!-- something that is able to be grabbed used for selecting colours, it attracts the grabber -->
+				<!-- The verlet-constraint distance should be the same as the radius to make it stick to the outside -->
+				<!-- Range is how close the hand needs to get to grab it-->
+				<a-entity
+					id="float"
+					class="grabable"
+					verlet-point="mass:1;"
+					verlet-constraint="to: #grabber; stiffness:0.05; range: 1.5; distance:0.4;"
+					position="0 1.2 -5"
+					geometry="primitive:sphere; radius: 0.4;"
+					material="color: white; opacity: 0.8; transparent: true; side: back;"
+				>
+					<a-animation attribute="scale" dur="1000" easing="ease-out-elastic" begin="grabber-hover-on" fill="forwards" to="1.3 1.3 1.3"></a-animation>
+					<a-animation attribute="scale" dur="1000" easing="ease-out-elastic" begin="grabber-hover-out" fill="forwards" to="1 1 1"></a-animation>
+
+					<a-animation attribute="material.color" dur="200" begin="grabber-drag-start" fill="forwards" from="#ffffff" to="#0000ff"></a-animation>
+					<a-animation attribute="material.color" dur="200" begin="grabber-drag-end" fill="forwards"  from="#0000ff" to="#ffffff"></a-animation>
+				</a-entity>
+
+				<!-- Make our floating object stick to the 3 options -->
+				<a-verlet-constraint from=".anchor"   to="#float" stiffness="0.4" range="0.3"></a-verlet-constraint>
 
 				<a-camera>
-					<a-entity id="camera-anchor" geometry="primitive:torus;" scale="0.2 0.2 0.2" verlet-point="mass: 0; sync-position: true;" position="0 0 -5" ></a-entity>
+
+					<!-- this is a static point used as a rest position for the grabber -->
+					<!-- this is also what we items to when we need to do grab it -->
+					<a-entity id="camera-anchor" verlet-point="mass: 0; sync-position: true;" verlet-constraint="stiffness: 0.4;" position="-0.3 -0.3 -1.5" ></a-entity>
 				</a-camera>
 
-				<a-verlet-constraint from=".anchor"        to="#float" distance="0" stiffness="0.4" range="0.3"></a-verlet-constraint>
-				<a-verlet-constraint from="#camera-anchor" to="#float" distance="0" stiffness="0.1"></a-verlet-constraint>
+				<!-- ideally this would be a little hand used for selecting items-->
+				<!-- It is usually attached to the camera but will drift to actionable objects-->
+				<a-entity id="grabber" verlet-point="mass:0.1;" position="0 0 0" geometry="primitive:sphere; radius: 0.2;" material="color: pink;"></a-entity>
+				<a-verlet-constraint from="#grabber"  to="#camera-anchor" stiffness="0.05"></a-verlet-constraint>
 
 			</a-entity>
+
+			<a-entity obj-model="obj: #ship-obj;" material="src: #ship-src-blue; normalMcale: 2; normalMap: #ship-normal; metalness:0.5; roughness: 0; sphericalEnvMap: #cgsky;" position="0 1 -13" rotation="1 -75 -5"></a-entity>
 		</a-scene>
 
 		<script>
+			var cameraAnchor = document.getElementById('camera-anchor');
+			function setConstraint() {
+				cameraAnchor.setAttribute('verlet-constraint','to','#' + this.id);
+			}
+			function removeConstraint() {
+				cameraAnchor.setAttribute('verlet-constraint','to','');
+			}
+			Array.from(document.querySelectorAll('.grabable')).forEach(function (el) {
+				el.addEventListener('grabber-drag-start', setConstraint);
+				el.addEventListener('grabber-drag-end', removeConstraint);
+			});
+
 
 		</script>
 
