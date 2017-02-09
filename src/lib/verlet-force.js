@@ -14,7 +14,7 @@ AFRAME.registerComponent('verlet-force', {
 	},
 	init() {
 		let el = this.el;
-		while (el && el.matches && !el.matches('[verlet-container]')) el = el.parentNode;
+		while (el && el.matches && !el.matches('[verlet-container], verlet-ui')) el = el.parentNode;
 		if (el.components['verlet-container']) {
 			this.parentReadyPromise = Promise.resolve(el.components['verlet-container']);
 		} else {

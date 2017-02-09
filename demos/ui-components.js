@@ -25,13 +25,92 @@ function squaredDistanceBetween(el1, el2) {
 	return dSquared;
 }
 
-AFRAME.registerSystem('grabber-tracking', {
+AFRAME.registerPrimitive('verlet-ui', {
+	defaultComponents: {
+		'grabber-tracking': {},
+		'verlet-container': {
+			gravity: 0,
+			friction: 0.8
+		}
+	},
+
+	mappings: {
+		manipulator: 'grabber-tracking.manipulator',
+		pointer: 'grabber-tracking.pointer'
+	}
+});
+
+var noop = function () { };
+var verletUITemplate = {
+	update: function () {
+		if (this.tick === noop) this.tick = this.__tick;
+	},
+	tick: function () {
+		let el = this.el;
+		while (el && el.matches && !el.matches('[grabber-tracking], verlet-ui')) el = el.parentNode;
+		this.parent = el;
+		this.__tick = this.tick;
+		this.tick = noop;
+		this.setup();
+	}
+};
+
+AFRAME.registerComponent('verlet-ui-default-pointer', {
 	init: function () {
-		var canvas = this.sceneEl.canvas;
+
+		var pointerOpenHand = document.createElement('a-entity');
+		pointerOpenHand.setAttribute('material', 'color: white;');
+		pointerOpenHand.setAttribute('scale', '0.2 0.2 0.2');
+		pointerOpenHand.setAttribute('rotation', '30 0 0');
+		pointerOpenHand.setAttribute('obj-model', 'obj: url(https://cdn.rawgit.com/SamsungInternet/a-frame-demos/44b878/a-frame-assets/hand/hand-relaxed.obj);');
+
+		var pointerClosedHand = document.createElement('a-entity');
+		pointerClosedHand.setAttribute('material', 'color: white;');
+		pointerClosedHand.setAttribute('scale', '0.2 0.2 0.2');
+		pointerClosedHand.setAttribute('rotation', '40 0 0');
+		pointerClosedHand.setAttribute('obj-model', 'obj: url(https://cdn.rawgit.com/SamsungInternet/a-frame-demos/44b878/a-frame-assets/hand/hand-fist.obj);');
+		pointerClosedHand.setAttribute('visible', 'false');
+
+		// Make the hand open and close
+		var pointer = this.el;
+
+		pointer.appendChild(pointerOpenHand);
+		pointer.appendChild(pointerClosedHand);
+
+		pointer.addEventListener('grabber-drag-start', function () {
+			pointerOpenHand.setAttribute('visible', false);
+			pointerClosedHand.setAttribute('visible', true);
+		});
+
+		pointer.addEventListener('grabber-drag-end', function () {
+			pointerOpenHand.setAttribute('visible', true);
+			pointerClosedHand.setAttribute('visible', false);
+		});
+
+		this.el1 = pointerOpenHand;
+		this.el2 = pointerClosedHand;
+	},
+	remove: function () {
+		this.el.removeChild(this.el1);
+		this.el.removeChild(this.el2);
+	}
+});
+
+AFRAME.registerComponent('grabber-tracking', {
+	schema: {
+		manipulator: {
+			type: 'selector'
+		},
+		pointer: {
+			type: 'selector'
+		},
+	},
+	init: function () {
+		var canvas = this.el.sceneEl.canvas;
 
 		// Wait for canvas to load.
 		if (!canvas) {
-			this.sceneEl.addEventListener('render-target-loaded', this.init.bind(this));
+			this.el.sceneEl.addEventListener('render-target-loaded', this.init.bind(this));
 			return;
 		}
 
@@ -40,18 +119,29 @@ AFRAME.registerSystem('grabber-tracking', {
 		canvas.addEventListener('mouseup', this.dragEnd.bind(this));
 		canvas.addEventListener('click', this.handleClick.bind(this));
 
-		this.grabber = document.getElementById('grabber');
-		this.cameraAnchor = document.getElementById('camera-anchor');
+		this.actionables = [];
+		this.currentObject = null;
+		this.ready === true;
+	},
+	update: function () {
+		this.grabber = this.data.pointer;
+		this.cameraAnchor = this.data.manipulator;
 
 		// Function to find the distance between anything and the grabber
 		this.squaredDistanceFn = squaredDistanceBetween(this.grabber);
 		this.sortFn = (function (a,b) {
 			return this.squaredDistanceFn(a) - this.squaredDistanceFn(b);
 		}).bind(this);
-
-		this.actionables = Array.from(document.querySelectorAll('.grabable'));
-		this.currentObject = null;
-		this.ready === true;
+	},
+	registerActionable: function (el) {
+		if (this.actionables.indexOf(el) === -1) {
+			this.actionables.push(el);
+		}
+	},
+	unRegisterActionable: function (el) {
+		var n = this.actionables.indexOf(el);
+		if (n === -1) return;
+		this.actionables.splice(n, 1);
 	},
 	handleClick: function () {
 		this.grabber.emit('grabber-click');
@@ -104,5 +194,71 @@ AFRAME.registerSystem('grabber-tracking', {
 			this.currentObject.emit('grabber-hover-out');
 			this.currentObject = null;
 		}
+	}
+});
+
+AFRAME.registerComponent('verlet-ui-grabable', AFRAME.utils.extend({
+	setup: function () {
+		this.parent.components['grabber-tracking'].registerActionable(this.el);
+	},
+	remove() {
+		this.parent.components['grabber-tracking'].unRegisterActionable(this.el);
+	}
+}, verletUITemplate));
+
+AFRAME.registerComponent('verlet-ui-pointer', AFRAME.utils.extend({
+	setup: function () {
+		this.el.setAttribute('verlet-point', 'mass:0.1;');
+		this.el.setAttribute('verlet-constraint', 'stiffness: 0.05; to: ' + this.parent.getDOMAttribute('grabber-tracking').manipulator);
+	}
+}, verletUITemplate));
+
+AFRAME.registerPrimitive('verlet-ui-pointer', {
+	defaultComponents: {
+		'verlet-ui-pointer': {}
+	}
+});
+
+AFRAME.registerComponent('verlet-ui-input', AFRAME.utils.extend({
+	schema: {
+		type: {
+
+			// One of 'radio',
+			type: 'string'
+		}
+	},
+	setup: function () {
+		if (this.data.type === 'radio') {
+			console.log('Setting up the radio buttons');
+		}
+	},
+	remove: function () {
+
+	}
+}, verletUITemplate));
+
+AFRAME.registerPrimitive('a-verlet-ui-input', {
+	defaultComponents: {
+		'verlet-ui-input': {}
+	},
+	mappings: {
+		type: 'verlet-ui-input.type'
+	}
+});
+
+AFRAME.registerPrimitive('a-verlet-ui-option', {
+	defaultComponents: {
+		'geometry': {
+			primitive: 'sphere',
+			radius: '0.2'
+		},
+		material: {
+			shader: 'standard'
+		}
+	},
+	mappings: {
+		type: 'verlet-ui-input.type',
+		radius: 'geometry.radius',
+		color: 'material.color'
 	}
 });

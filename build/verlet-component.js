@@ -1177,9 +1177,10 @@
 				default: Infinity
 			}
 		},
+
 		init: function init() {
 			var el = this.el;
-			while (el && el.matches && !el.matches('[verlet-container]')) {
+			while (el && el.matches && !el.matches('[verlet-container], verlet-ui')) {
 				el = el.parentNode;
 			}if (el.components['verlet-container']) {
 				this.parentReadyPromise = Promise.resolve(el.components['verlet-container']);
@@ -1329,7 +1330,7 @@
 		},
 		init: function init() {
 			var el = this.el;
-			while (el && el.matches && !el.matches('[verlet-container]')) {
+			while (el && el.matches && !el.matches('[verlet-container], verlet-ui')) {
 				el = el.parentNode;
 			}if (el.components['verlet-container']) {
 				this.parentReadyPromise = Promise.resolve(el.components['verlet-container']);
@@ -1415,7 +1416,7 @@
 			var _this = this;
 
 			var el = this.el;
-			while (el && el.matches && !el.matches('[verlet-container]')) {
+			while (el && el.matches && !el.matches('[verlet-container], verlet-ui')) {
 				el = el.parentNode;
 			}if (el.components['verlet-container']) {
 				this.parentReadyPromise = Promise.resolve(el.components['verlet-container']);

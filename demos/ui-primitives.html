@@ -32,68 +32,42 @@
 			<img id="ship-src-green" crossorigin="anonymous" src="https://cdn.rawgit.com/SamsungInternet/a-frame-demos/gh-pages/a-frame-assets/Feisar_Ship_OBJ/maps/diffuse_green.jpg">
 			<img id="ship-src-red" crossorigin="anonymous" src="https://cdn.rawgit.com/SamsungInternet/a-frame-demos/gh-pages/a-frame-assets/Feisar_Ship_OBJ/maps/diffuse_red.jpg">
 			<img id="ship-normal" crossorigin="anonymous" src="https://cdn.rawgit.com/SamsungInternet/a-frame-demos/gh-pages/a-frame-assets/Feisar_Ship_OBJ/maps/normal.jpg">
-			<a-asset-item id="hand-open" src="https://cdn.rawgit.com/SamsungInternet/a-frame-demos/44b878/a-frame-assets/hand/hand-relaxed.obj"></a-asset-item>
-			<a-asset-item id="hand-closed" src="https://cdn.rawgit.com/SamsungInternet/a-frame-demos/44b878/a-frame-assets/hand/hand-fist.obj"></a-asset-item>
 		</a-assets>
 		<a-sky src="#cgsky" rotation="0 -90 0" material="fog: false; depthTest: false;"></a-sky>
 		<a-entity id="floor" geometry="primitive: plane; width: 1000; height: 1000;" rotation="-90 0 0" material="src: #grid; repeat: 400 400; metalness:0.0; roughness: 1; depthTest: false;"></a-entity>
 
-		<a-entity grabber-tracking="manipulator: #camera-anchor; pointer: #grabber;" verlet-container="floor: 0; gravity: 0; friction: 0.8;">
-			<a-entity class="color-selector-anchor" id="color-red" verlet-point="mass: 0;" geometry="primitive:sphere; radius: 0.3;"
-							material="color: red;" position="-1 1 -1"></a-entity>
-			<a-entity class="color-selector-anchor" id="color-blue" verlet-point="mass: 0;" geometry="primitive:sphere; radius: 0.3;"
-							material="color: blue;" position="0 1 -1.5"></a-entity>
-			<a-entity class="color-selector-anchor" id="color-green" verlet-point="mass: 0;" geometry="primitive:sphere; radius: 0.3;"
-							material="color: green;" position="1 1 -1"></a-entity>
+		<verlet-ui manipulator="#camera-anchor" pointer="[verlet-ui-pointer]">
 
-			<!-- something that is able to be grabbed used for selecting colours, it attracts the grabber -->
-			<!-- The verlet-constraint distance should be the same as the radius to make it stick to the outside -->
-			<!-- Range is how close the hand needs to get to grab it-->
-			<a-entity id="float" class="grabable" grabber-grabable verlet-point="mass:1;" verlet-constraint="to: #grabber; stiffness:0.05; range: 0.8; distance:0.4;"
-							position="0 1 -1.5" geometry="primitive:sphere; radius: 0.4;" material="color: white; opacity: 0.8; transparent: true; side: back;">
-				<a-animation attribute="scale" dur="1000" easing="ease-out-elastic" begin="grabber-hover-on" fill="forwards" to="1.3 1.3 1.3"></a-animation>
-				<a-animation attribute="scale" dur="1000" easing="ease-out-elastic" begin="grabber-hover-out" fill="forwards" to="1 1 1"></a-animation>
-				<a-animation attribute="material.color" dur="200" begin="grabber-drag-start" fill="forwards" from="#ffffff" to="#0000ff"></a-animation>
-				<a-animation attribute="material.color" dur="200" begin="grabber-drag-end" fill="forwards" from="#0000ff" to="#ffffff"></a-animation>
-			</a-entity>
-			<!-- Make our floating object stick to the 3 options make sure the range doesn't make them overlap-->
-			<a-verlet-constraint from=".color-selector-anchor" to="#float" stiffness="0.4" range="0.75"></a-verlet-constraint>
+			<a-verlet-ui-input type="radio">
+				<a-verlet-ui-option id="color-red" color="red" position="-1 1 -1"></a-verlet-ui-option>
+				<a-verlet-ui-option id="color-blue" color="blue" position="0 1 -1.5"></a-verlet-ui-option>
+				<a-verlet-ui-option id="color-green" color="green" position="1 1 -1"></a-verlet-ui-option>
+
+				<!-- something that is able to be grabbed used for selecting colours, it attracts the grabber -->
+				<!-- The verlet-constraint distance should be the same as the radius to make it stick to the outside -->
+				<!-- Range is how close the hand needs to get to grab it-->
+				<a-entity id="float" class="grabable" position="0 1 -1.5" geometry="primitive:sphere; radius: 0.4;" material="color: white; opacity: 0.8; transparent: true; side: back;">
+					<a-animation attribute="scale" dur="1000" easing="ease-out-elastic" begin="grabber-hover-on" fill="forwards" to="1.3 1.3 1.3"></a-animation>
+					<a-animation attribute="scale" dur="1000" easing="ease-out-elastic" begin="grabber-hover-out" fill="forwards" to="1 1 1"></a-animation>
+					<a-animation attribute="material.color" dur="200" begin="grabber-drag-start" fill="forwards" from="#ffffff" to="#0000ff"></a-animation>
+					<a-animation attribute="material.color" dur="200" begin="grabber-drag-end" fill="forwards" from="#0000ff" to="#ffffff"></a-animation>
+				</a-entity>
+			</a-verlet-ui-input>
+
 			<a-camera>
 				<!-- this is a static point used as a rest position for the grabber -->
 				<!-- this is also what we items to when we need to do grab it -->
 				<a-entity id="camera-anchor" verlet-point="mass: 0; sync-position: true;" verlet-constraint="stiffness: 0.4;" position="-0.3 -0.3 -1.5"></a-entity>
 			</a-camera>
-			<!-- ideally this would be a little hand used for selecting items-->
-			<!-- It is usually attached to the camera but will drift to actionable objects-->
-			<a-entity id="grabber" verlet-point="mass:0.1;" position="0 0 0" look-at='a-camera'>
-				<!-- These are toggled visibility in the JS below -->
-				<a-entity id="grabber-open" obj-model="obj: #hand-open;" material="color: white;" scale="0.2 0.2 0.2" visible="true" rotation="30 0 0"></a-entity>
-				<a-entity id="grabber-closed" obj-model="obj: #hand-closed;" material="color: white;" scale="0.2 0.2 0.2" visible="false" rotation="40 0 0"></a-entity>
-				<a-verlet-constraint from="#grabber" to="#camera-anchor" stiffness="0.05"></a-verlet-constraint>
-			</a-entity>
-			<a-entity id="ship" obj-model="obj: #ship-obj;" material="src: #ship-src-blue; normalScale: 2 2; normalMap: #ship-normal; metalness:0.5; roughness: 0; sphericalEnvMap: #cgsky;"
+
+			<!-- this is the tool used to interact with the ui -->
+			<verlet-ui-pointer verlet-ui-default-pointer look-at='a-camera'></verlet-ui-pointer>
+		</verlet-ui>
+
+		<a-entity id="ship" obj-model="obj: #ship-obj;" material="src: #ship-src-blue; normalScale: 2 2; normalMap: #ship-normal; metalness:0.5; roughness: 0; sphericalEnvMap: #cgsky;"
 							position="0 1 -13" rotation="1 -75 -5"></a-entity>
-		</a-entity>
 	</a-scene>
 	<script>
-
-		// Make the hand open and close
-		var grabber = document.getElementById('grabber');
-		var grabberOpenHand = document.getElementById('grabber-open');
-		var grabberClosedHand = document.getElementById('grabber-closed');
-
-		grabber.addEventListener('grabber-drag-start', function () {
-			grabberOpenHand.setAttribute('visible', false);
-			grabberClosedHand.setAttribute('visible', true);
-		});
-
-		grabber.addEventListener('grabber-drag-end', function () {
-			grabberOpenHand.setAttribute('visible', true);
-			grabberClosedHand.setAttribute('visible', false);
-		});
-
-
-
 
 		// Set up being able to drag and pull the dragable object
 		var cameraAnchor = document.getElementById('camera-anchor');
