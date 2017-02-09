@@ -40,11 +40,11 @@ AFRAME.registerSystem('grabber-tracking', {
 		canvas.addEventListener('mouseup', this.dragEnd.bind(this));
 		canvas.addEventListener('click', this.handleClick.bind(this));
 
-		var grabber = document.getElementById('grabber');
+		this.grabber = document.getElementById('grabber');
 		this.cameraAnchor = document.getElementById('camera-anchor');
 
 		// Function to find the distance between anything and the grabber
-		this.squaredDistanceFn = squaredDistanceBetween(grabber);
+		this.squaredDistanceFn = squaredDistanceBetween(this.grabber);
 		this.sortFn = (function (a,b) {
 			return this.squaredDistanceFn(a) - this.squaredDistanceFn(b);
 		}).bind(this);
@@ -54,11 +54,13 @@ AFRAME.registerSystem('grabber-tracking', {
 		this.ready === true;
 	},
 	handleClick: function () {
+		this.grabber.emit('grabber-click');
 		if (this.currentObject !== null) {
 			this.currentObject.emit('grabber-click');
 		}
 	},
 	dragStart: function (e) {
+		this.grabber.emit('grabber-drag-start');
 		if (this.currentObject !== null) {
 			this.grabEl = this.currentObject;
 			this.currentObject.emit('grabber-drag-start');
@@ -66,6 +68,7 @@ AFRAME.registerSystem('grabber-tracking', {
 		}
 	},
 	dragEnd: function (e) {
+		this.grabber.emit('grabber-drag-end');
 		if (this.grabEl) {
 			this.grabEl.emit('grabber-drag-end');
 			this.grabEl = null;
