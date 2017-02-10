@@ -61,13 +61,13 @@
 	importScripts('https://cdn.polyfill.io/v2/polyfill.js?features=es6');
 
 	var idIncrementer = 100;
-	var World3D = __webpack_require__(13);
-	var Constraint3D = __webpack_require__(26);
-	var Point3D = __webpack_require__(30);
+	var World3D = __webpack_require__(17);
+	var Constraint3D = __webpack_require__(30);
+	var Point3D = __webpack_require__(34);
 	var timeFactor = 1;
 	var vec3 = {
-		distance: __webpack_require__(28),
-		scaleAndAdd: __webpack_require__(32)
+		distance: __webpack_require__(32),
+		scaleAndAdd: __webpack_require__(36)
 	};
 
 	var VerletThreePoint = function VerletThreePoint(_ref) {
@@ -528,23 +528,27 @@
 /* 10 */,
 /* 11 */,
 /* 12 */,
-/* 13 */
+/* 13 */,
+/* 14 */,
+/* 15 */,
+/* 16 */,
+/* 17 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var vec3 = {
-	    create: __webpack_require__(14),
-	    add: __webpack_require__(15),
-	    multiply: __webpack_require__(16),
-	    sub: __webpack_require__(17),
-	    scale: __webpack_require__(18),
-	    copy: __webpack_require__(19),
-	    sqrLen: __webpack_require__(20),
-	    fromValues: __webpack_require__(21),
+	    create: __webpack_require__(18),
+	    add: __webpack_require__(19),
+	    multiply: __webpack_require__(20),
+	    sub: __webpack_require__(21),
+	    scale: __webpack_require__(22),
+	    copy: __webpack_require__(23),
+	    sqrLen: __webpack_require__(24),
+	    fromValues: __webpack_require__(25),
 	}
-	module.exports = __webpack_require__(22)(vec3)
+	module.exports = __webpack_require__(26)(vec3)
 
 /***/ },
-/* 14 */
+/* 18 */
 /***/ function(module, exports) {
 
 	module.exports = create;
@@ -563,7 +567,7 @@
 	}
 
 /***/ },
-/* 15 */
+/* 19 */
 /***/ function(module, exports) {
 
 	module.exports = add;
@@ -584,7 +588,7 @@
 	}
 
 /***/ },
-/* 16 */
+/* 20 */
 /***/ function(module, exports) {
 
 	module.exports = multiply;
@@ -605,7 +609,7 @@
 	}
 
 /***/ },
-/* 17 */
+/* 21 */
 /***/ function(module, exports) {
 
 	module.exports = subtract;
@@ -626,7 +630,7 @@
 	}
 
 /***/ },
-/* 18 */
+/* 22 */
 /***/ function(module, exports) {
 
 	module.exports = scale;
@@ -647,7 +651,7 @@
 	}
 
 /***/ },
-/* 19 */
+/* 23 */
 /***/ function(module, exports) {
 
 	module.exports = copy;
@@ -667,7 +671,7 @@
 	}
 
 /***/ },
-/* 20 */
+/* 24 */
 /***/ function(module, exports) {
 
 	module.exports = squaredLength;
@@ -686,7 +690,7 @@
 	}
 
 /***/ },
-/* 21 */
+/* 25 */
 /***/ function(module, exports) {
 
 	module.exports = fromValues;
@@ -708,12 +712,12 @@
 	}
 
 /***/ },
-/* 22 */
+/* 26 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var number = __webpack_require__(23)
-	var clamp = __webpack_require__(24)
-	var createCollider = __webpack_require__(25)
+	var number = __webpack_require__(27)
+	var clamp = __webpack_require__(28)
+	var createCollider = __webpack_require__(29)
 
 	module.exports = function create(vec) {
 	    
@@ -785,7 +789,7 @@
 	}
 
 /***/ },
-/* 23 */
+/* 27 */
 /***/ function(module, exports) {
 
 	module.exports = function numtype(num, def) {
@@ -795,7 +799,7 @@
 	}
 
 /***/ },
-/* 24 */
+/* 28 */
 /***/ function(module, exports) {
 
 	module.exports = clamp
@@ -808,7 +812,7 @@
 
 
 /***/ },
-/* 25 */
+/* 29 */
 /***/ function(module, exports) {
 
 	module.exports = function(vec) {
@@ -865,21 +869,21 @@
 	}
 
 /***/ },
-/* 26 */
+/* 30 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var vec3 = {
-	    create: __webpack_require__(14),
-	    add: __webpack_require__(15),
-	    dot: __webpack_require__(27),
-	    sub: __webpack_require__(17),
-	    scale: __webpack_require__(18),
-	    distance: __webpack_require__(28)
+	    create: __webpack_require__(18),
+	    add: __webpack_require__(19),
+	    dot: __webpack_require__(31),
+	    sub: __webpack_require__(21),
+	    scale: __webpack_require__(22),
+	    distance: __webpack_require__(32)
 	}
-	module.exports = __webpack_require__(29)(vec3)
+	module.exports = __webpack_require__(33)(vec3)
 
 /***/ },
-/* 27 */
+/* 31 */
 /***/ function(module, exports) {
 
 	module.exports = dot;
@@ -896,7 +900,7 @@
 	}
 
 /***/ },
-/* 28 */
+/* 32 */
 /***/ function(module, exports) {
 
 	module.exports = distance;
@@ -916,7 +920,7 @@
 	}
 
 /***/ },
-/* 29 */
+/* 33 */
 /***/ function(module, exports) {
 
 	module.exports = function(vec) {
@@ -991,18 +995,18 @@
 
 
 /***/ },
-/* 30 */
+/* 34 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var vec3 = {
-	    create: __webpack_require__(14),
-	    sub: __webpack_require__(17),
-	    copy: __webpack_require__(19)
+	    create: __webpack_require__(18),
+	    sub: __webpack_require__(21),
+	    copy: __webpack_require__(23)
 	}
-	module.exports = __webpack_require__(31)(vec3)
+	module.exports = __webpack_require__(35)(vec3)
 
 /***/ },
-/* 31 */
+/* 35 */
 /***/ function(module, exports) {
 
 	module.exports = function(vec) {
@@ -1045,7 +1049,7 @@
 	}
 
 /***/ },
-/* 32 */
+/* 36 */
 /***/ function(module, exports) {
 
 	module.exports = scaleAndAdd;
