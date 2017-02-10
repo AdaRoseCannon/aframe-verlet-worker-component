@@ -46,18 +46,10 @@
 				<!-- something that is able to be grabbed used for selecting colours, it attracts the grabber -->
 				<!-- The verlet-constraint distance should be the same as the radius to make it stick to the outside -->
 				<!-- Range is how close the hand needs to get to grab it-->
-				<a-verlet-ui-input-selector default="a-verlet-ui-option[value='blue']">
-					<a-animation attribute="scale" dur="1000" easing="ease-out-elastic" begin="grabber-hover-on" fill="forwards" to="1.3 1.3 1.3"></a-animation>
-					<a-animation attribute="scale" dur="1000" easing="ease-out-elastic" begin="grabber-hover-out" fill="forwards" to="1 1 1"></a-animation>
-					<a-animation attribute="material.color" dur="200" begin="grabber-drag-start" fill="forwards" from="#ffffff" to="#0000ff"></a-animation>
-					<a-animation attribute="material.color" dur="200" begin="grabber-drag-end" fill="forwards" from="#0000ff" to="#ffffff"></a-animation>
-				</a-verlet-ui-input-selector>
+				<a-verlet-ui-input-selector default="a-verlet-ui-option[value='blue']" verlet-ui-default-selector="color: #ffffff; active-color: #0000ff;"></a-verlet-ui-input-selector>
 			</a-verlet-ui-input>
 
-			<a-verlet-ui-input type="button" position="0 1 -5" geometry="primitive: sphere; radius: 0.5;" verlet-ui-grabable="radius: 0.5;" material="color: red;">
-				<a-animation attribute="scale" dur="1000" easing="ease-out-elastic" begin="grabber-hover-on" fill="forwards" to="1.3 1.3 1.3"></a-animation>
-				<a-animation attribute="scale" dur="1000" easing="ease-out-elastic" begin="grabber-hover-out" fill="forwards" to="1 1 1"></a-animation>
-				<a-animation attribute="material.color" dur="400" begin="click" fill="both" from="#0000ff" to="#ff0000"></a-animation>
+			<a-verlet-ui-input type="button" position="0 1 -5" verlet-ui-default-button="color: #ff9900; active-color: #ff0000;" geometry="primitive: sphere; radius: 0.5;" verlet-ui-grabable="radius: 0.5;">
 			</a-verlet-ui-input>
 
 			<a-camera>

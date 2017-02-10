@@ -250,12 +250,29 @@
 			}
 		},
 		setup: function setup() {
-			var pointerSelector = this.parent.getDOMAttribute('grabber-tracking').pointer;
-			this.el.setAttribute('verlet-constraint', 'stiffness:0.2; range: ' + this.data.range + '; distance: ' + this.data.radius + '; to: ' + pointerSelector + ';');
+
+			this.remove();
+
+			var pointer = this.parent.getAttribute('grabber-tracking').pointer;
 			this.parent.components['grabber-tracking'].registerActionable(this.el);
+
+			this.constraintIdPromise = this.parent.components['verlet-container'].connectPoints(this.el, pointer, {
+				stiffness: 0.2,
+				range: this.data.range,
+				restingDistance: this.data.radius
+			}).then(function (data) {
+				return data.constraintId;
+			});
 		},
 		remove: function remove() {
+			var _this = this;
+
 			this.parent.components['grabber-tracking'].unRegisterActionable(this.el);
+			if (this.constraintIdPromise) {
+				this.constraintIdPromise.then(function (id) {
+					return _this.parent.components['verlet-container'].removeConstraint(id);
+				});
+			}
 		}
 	}, verletUITemplate));
 
@@ -332,6 +349,128 @@
 			return types[this.data.type].setup.bind(this)();
 		}
 	}, verletUITemplate));
+
+	AFRAME.registerComponent('verlet-ui-default-selector', {
+		schema: {
+			'color': {
+				type: 'color',
+				default: '#ffffff'
+			},
+			'activeColor': {
+				type: 'color',
+				default: '#ff9911'
+			}
+		},
+		init: function init() {
+			this.els = [];
+		},
+		update: function update() {
+
+			// create standard animations for interactions
+			this.el.setAttribute('material', 'color', this.data.color);
+
+			this.remove();
+			var el1 = document.createElement('a-animation');
+			el1.setAttribute('attribute', 'scale');
+			el1.setAttribute('easing', 'ease-out-elastic');
+			el1.setAttribute('begin', 'grabber-hover-on');
+			el1.setAttribute('fill', 'forwards');
+			el1.setAttribute('dur', '1000');
+			el1.setAttribute('to', '1.3 1.3 1.3');
+
+			var el2 = document.createElement('a-animation');
+			el2.setAttribute('attribute', 'scale');
+			el2.setAttribute('easing', 'ease-out-elastic');
+			el2.setAttribute('begin', 'grabber-hover-out');
+			el2.setAttribute('fill', 'forwards');
+			el2.setAttribute('dur', '1000');
+			el2.setAttribute('to', '1 1 1');
+
+			var el3 = document.createElement('a-animation');
+			el3.setAttribute('attribute', 'material.color');
+			el3.setAttribute('begin', 'grabber-drag-start');
+			el3.setAttribute('fill', 'forwards');
+			el3.setAttribute('dur', '200');
+			el3.setAttribute('from', this.data['color']);
+			el3.setAttribute('to', this.data['activeColor']);
+
+			var el4 = document.createElement('a-animation');
+			el4.setAttribute('attribute', 'material.color');
+			el4.setAttribute('begin', 'grabber-drag-end');
+			el4.setAttribute('fill', 'forwards');
+			el4.setAttribute('dur', '200');
+			el4.setAttribute('from', this.data['activeColor']);
+			el4.setAttribute('to', this.data['color']);
+
+			this.el.appendChild(el1);
+			this.el.appendChild(el2);
+			this.el.appendChild(el3);
+			this.el.appendChild(el4);
+			this.els.push(el1, el2, el3, el4);
+		},
+		remove: function remove() {
+			while (this.els.length) {
+				this.el.removeChild(this.els.pop());
+			}
+		}
+	});
+
+	AFRAME.registerComponent('verlet-ui-default-button', {
+		schema: {
+			'color': {
+				type: 'color',
+				default: '#ffffff'
+			},
+			'activeColor': {
+				type: 'color',
+				default: '#ff9911'
+			}
+		},
+		init: function init() {
+			this.els = [];
+		},
+		update: function update() {
+
+			this.el.setAttribute('material', 'color', this.data.color);
+
+			// create standard animations for interactions
+
+			this.remove();
+			var el1 = document.createElement('a-animation');
+			el1.setAttribute('attribute', 'scale');
+			el1.setAttribute('easing', 'ease-out-elastic');
+			el1.setAttribute('begin', 'grabber-hover-on');
+			el1.setAttribute('fill', 'forwards');
+			el1.setAttribute('dur', '1000');
+			el1.setAttribute('to', '1.3 1.3 1.3');
+
+			var el2 = document.createElement('a-animation');
+			el2.setAttribute('attribute', 'scale');
+			el2.setAttribute('easing', 'ease-out-elastic');
+			el2.setAttribute('begin', 'grabber-hover-out');
+			el2.setAttribute('fill', 'forwards');
+			el2.setAttribute('dur', '1000');
+			el2.setAttribute('to', '1 1 1');
+
+			var el3 = document.createElement('a-animation');
+			el3.setAttribute('attribute', 'material.color');
+			el3.setAttribute('begin', 'grabber-click');
+			el3.setAttribute('fill', 'forwards');
+			el3.setAttribute('dur', '200');
+			el3.setAttribute('from', this.data['activeColor']);
+			el3.setAttribute('to', this.data['color']);
+
+			this.el.appendChild(el1);
+			this.el.appendChild(el2);
+			this.el.appendChild(el3);
+			this.els.push(el1, el2, el3);
+		},
+		remove: function remove() {
+			while (this.els.length) {
+				this.el.removeChild(this.els.pop());
+			}
+		}
+	});
 
 /***/ },
 
@@ -440,6 +579,12 @@
 	/* eslint-env browser, node */
 
 	module.exports.setup = function () {
+		this.constraints = this.constraints || [];
+		this.eventListeners = this.eventListeners || [];
+
+		// clean up
+		this.remove();
+
 		var selector = this.el.querySelector('a-verlet-ui-input-selector');
 		var manipulatorSelector = this.parent.getDOMAttribute('grabber-tracking').manipulator;
 		var self = this;
@@ -455,14 +600,14 @@
 		};
 
 		// Set up being able to drag and pull the dragable object
-		function setConstraint() {
+		this.setConstraint = function setConstraint() {
 			this.setAttribute('verlet-constraint', 'stiffness: 0.4; to: ' + manipulatorSelector + ';');
-		}
-		function removeConstraint() {
+		};
+		this.removeConstraint = function removeConstraint() {
 			this.setAttribute('verlet-constraint', 'stiffness: 0.4; to:;');
-		}
-		selector.addEventListener('grabber-drag-start', setConstraint);
-		selector.addEventListener('grabber-drag-end', removeConstraint);
+		};
+		selector.addEventListener('grabber-drag-start', this.setConstraint);
+		selector.addEventListener('grabber-drag-end', this.removeConstraint);
 
 		this.updateValue();
 
@@ -483,11 +628,23 @@
 				restingDistance: 0
 			}).then(function (data) {
 				option.__constraintId = data.constraintId;
+				self.constraints.push(data.constraintId);
 			});
 		});
 	};
 
-	module.exports.remove = function () {};
+	module.exports.remove = function () {
+		var _this = this;
+
+		// clean up constraints and eventListeners
+
+		this.constraints.forEach(function (id) {
+			return _this.parent.components['verlet-container'].removeConstraint(id);
+		});
+		var selector = this.el.querySelector('a-verlet-ui-input-selector');
+		selector.removeEventListener('grabber-drag-start', this.setConstraint);
+		selector.removeEventListener('grabber-drag-end', this.removeConstraint);
+	};
 
 /***/ },
 

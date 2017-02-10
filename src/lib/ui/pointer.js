@@ -189,12 +189,28 @@ AFRAME.registerComponent('verlet-ui-grabable', AFRAME.utils.extend({
 		}
 	},
 	setup: function () {
-		var pointerSelector = this.parent.getDOMAttribute('grabber-tracking').pointer;
-		this.el.setAttribute('verlet-constraint', 'stiffness:0.2; range: ' + this.data.range + '; distance: ' + this.data.radius + '; to: ' + pointerSelector + ';');
+
+		this.remove();
+
+		var pointer = this.parent.getAttribute('grabber-tracking').pointer;
 		this.parent.components['grabber-tracking'].registerActionable(this.el);
+
+		this.constraintIdPromise = this.parent.components['verlet-container'].connectPoints(
+			this.el,
+			pointer,
+			{
+				stiffness: 0.2,
+				range: this.data.range,
+				restingDistance: this.data.radius
+			}
+		).then(function (data) {
+			return data.constraintId;
+		});
 	},
 	remove() {
 		this.parent.components['grabber-tracking'].unRegisterActionable(this.el);
-
+		if (this.constraintIdPromise) {
+			this.constraintIdPromise.then(id => this.parent.components['verlet-container'].removeConstraint(id));
+		}
 	}
 }, verletUITemplate));
