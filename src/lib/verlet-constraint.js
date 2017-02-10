@@ -46,7 +46,6 @@ AFRAME.registerComponent('verlet-constraint', {
 		// destroy everything then rebuild!
 		this.remove().then(() => {
 			this.idPromises = this.idPromises || [];
-			this.data.restingDistance = this.data.distance;
 			this.data.breakingDistance = this.data.breakingDistance ? Number(this.data.breakingDistance) : undefined;
 			this.parentReadyPromise.then(verletSystem => {
 				if ((!this.data.from || !this.data.from.length)) {
@@ -68,21 +67,13 @@ AFRAME.registerComponent('verlet-constraint', {
 				for (const i of this.data.to) {
 					for (const j of this.data.from) {
 						if (i !== j) {
-							if (!i.components['verlet-point'].idPromise) i.updateComponent('verlet-point');
-							if (!j.components['verlet-point'].idPromise) j.updateComponent('verlet-point');
 							this.idPromises.push(
-								Promise.all([i.components['verlet-point'].idPromise, j.components['verlet-point'].idPromise])
-								.then(arr => {
-									const id1 = arr[0];
-									const id2 = arr[1];
-									return verletSystem.connectPoints(id1, id2, {
-										stiffness: this.data.stiffness,
-										restingDistance: this.data.restingDistance,
-										range: this.data.range,
-										breakingDistance: this.data.breakingDistance
-									})
-									.then(obj => obj.constraintId);
-								})
+								verletSystem.connectPoints(i, j, {
+									stiffness: this.data.stiffness,
+									restingDistance: this.data.distance,
+									range: this.data.range,
+									breakingDistance: this.data.breakingDistance
+								}).then(obj => obj.constraintId)
 							);
 						}
 					}

@@ -56,7 +56,18 @@ AFRAME.registerComponent('verlet-container', {
 		return this.systemPromise.then(v => v.updatePoint(inData));
 	},
 	connectPoints(p1, p2, options) {
-		return this.systemPromise.then(v => v.connectPoints(p1, p2, options));
+
+		if (typeof options.restingDistance !== 'number' || options.restingDistance === NaN) console.warn('Invalid Contstraint', p1, p2, options);
+
+		if (!p1.components['verlet-point'].idPromise) p1.updateComponent('verlet-point');
+		if (!p2.components['verlet-point'].idPromise) p2.updateComponent('verlet-point');
+		return Promise.all([p1.components['verlet-point'].idPromise, p2.components['verlet-point'].idPromise, this.systemPromise])
+		.then(arr => {
+			const id1 = arr[0];
+			const id2 = arr[1];
+			const v = arr[2];
+			return v.connectPoints(id1, id2, options);
+		});
 	},
 	removeConstraint(id) {
 		return this.systemPromise.then(v => v.removeConstraint(id));

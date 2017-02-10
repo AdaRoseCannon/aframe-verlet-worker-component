@@ -16,7 +16,7 @@
 	<script src="https://aframe.io/releases/0.4.0/aframe.min.js"></script>
 	<script src="https://cdn.rawgit.com/ngokevin/kframe/11c39b9e/components/look-at/dist/aframe-look-at-component.min.js"></script>
 	<script src="../build/verlet-component.js"></script>
-	<script src="./ui-components.js"></script>
+	<script src="../build/verlet-ui.js"></script>
 </head>
 
 <body>
@@ -39,63 +39,56 @@
 		<verlet-ui manipulator="#camera-anchor" pointer="[verlet-ui-pointer]">
 
 			<a-verlet-ui-input type="radio">
-				<a-verlet-ui-option id="color-red" color="red" position="-1 1 -1"></a-verlet-ui-option>
-				<a-verlet-ui-option id="color-blue" color="blue" position="0 1 -1.5"></a-verlet-ui-option>
-				<a-verlet-ui-option id="color-green" color="green" position="1 1 -1"></a-verlet-ui-option>
+				<a-verlet-ui-option color="red" value="red" position="-1 1 -1.5"></a-verlet-ui-option>
+				<a-verlet-ui-option color="blue" value="blue" position="0 1 -1.5"></a-verlet-ui-option>
+				<a-verlet-ui-option color="green" value="green" position="1 1 -1.5"></a-verlet-ui-option>
 
 				<!-- something that is able to be grabbed used for selecting colours, it attracts the grabber -->
 				<!-- The verlet-constraint distance should be the same as the radius to make it stick to the outside -->
 				<!-- Range is how close the hand needs to get to grab it-->
-				<a-entity id="float" class="grabable" position="0 1 -1.5" geometry="primitive:sphere; radius: 0.4;" material="color: white; opacity: 0.8; transparent: true; side: back;">
+				<a-verlet-ui-input-selector default="a-verlet-ui-option[value='blue']">
 					<a-animation attribute="scale" dur="1000" easing="ease-out-elastic" begin="grabber-hover-on" fill="forwards" to="1.3 1.3 1.3"></a-animation>
 					<a-animation attribute="scale" dur="1000" easing="ease-out-elastic" begin="grabber-hover-out" fill="forwards" to="1 1 1"></a-animation>
 					<a-animation attribute="material.color" dur="200" begin="grabber-drag-start" fill="forwards" from="#ffffff" to="#0000ff"></a-animation>
 					<a-animation attribute="material.color" dur="200" begin="grabber-drag-end" fill="forwards" from="#0000ff" to="#ffffff"></a-animation>
-				</a-entity>
+				</a-verlet-ui-input-selector>
+			</a-verlet-ui-input>
+
+			<a-verlet-ui-input type="button" position="0 1 -5" geometry="primitive: sphere; radius: 0.5;" verlet-ui-grabable="radius: 0.5;" material="color: red;">
+				<a-animation attribute="scale" dur="1000" easing="ease-out-elastic" begin="grabber-hover-on" fill="forwards" to="1.3 1.3 1.3"></a-animation>
+				<a-animation attribute="scale" dur="1000" easing="ease-out-elastic" begin="grabber-hover-out" fill="forwards" to="1 1 1"></a-animation>
+				<a-animation attribute="material.color" dur="400" begin="click" fill="both" from="#0000ff" to="#ff0000"></a-animation>
 			</a-verlet-ui-input>
 
 			<a-camera>
 				<!-- this is a static point used as a rest position for the grabber -->
 				<!-- this is also what we items to when we need to do grab it -->
-				<a-entity id="camera-anchor" verlet-point="mass: 0; sync-position: true;" verlet-constraint="stiffness: 0.4;" position="-0.3 -0.3 -1.5"></a-entity>
+				<a-entity id="camera-anchor" verlet-point="mass: 0; sync-position: true;" verlet-constraint="stiffness: 0.4;" position="-0.4 -0.5 -0.75"></a-entity>
 			</a-camera>
 
 			<!-- this is the tool used to interact with the ui -->
 			<verlet-ui-pointer verlet-ui-default-pointer look-at='a-camera'></verlet-ui-pointer>
 		</verlet-ui>
 
-		<a-entity id="ship" obj-model="obj: #ship-obj;" material="src: #ship-src-blue; normalScale: 2 2; normalMap: #ship-normal; metalness:0.5; roughness: 0; sphericalEnvMap: #cgsky;"
-							position="0 1 -13" rotation="1 -75 -5"></a-entity>
+		<a-entity id="spinner" position="0 0 -34">
+			<a-animation attribute="rotation" dur="7000" easing="ease-in-out" begin="spin" fill="both" from="0 0 0" to="0 -720 0"></a-animation>
+
+			<a-entity id="ship" obj-model="obj: #ship-obj;" material="src: #ship-src-blue; normalScale: 2 2; normalMap: #ship-normal; metalness:0.5; roughness: 0; sphericalEnvMap: #cgsky;"
+							position="0 1 20" rotation="1 -75 -5"></a-entity>
+		</a-entity>
 	</a-scene>
 	<script>
 
 		// Set up being able to drag and pull the dragable object
-		var cameraAnchor = document.getElementById('camera-anchor');
-		function setConstraint() {
-			cameraAnchor.setAttribute('verlet-constraint','to','#' + this.id);
-		}
-		function removeConstraint() {
-			cameraAnchor.setAttribute('verlet-constraint','to','');
-		}
-		Array.from(document.querySelectorAll('.grabable')).forEach(function (el) {
-			el.addEventListener('grabber-drag-start', setConstraint);
-			el.addEventListener('grabber-drag-end', removeConstraint);
+		var option = document.querySelector('a-verlet-ui-input[type="radio"]');
+		option.addEventListener('change', function () {
+			ship.setAttribute('material', 'src', '#ship-src-' + this.value);
 		});
 
-		var ship = document.getElementById('ship');
-
-		// Set up changing the colour with float
-		var float = document.getElementById('float');
-		var options = Array.from(document.querySelectorAll('.color-selector-anchor'));
-		float.addEventListener('grabber-drag-end', function () {
-			options.sort(function (a,b) {
-				var distanceToA = float.object3D.position.distanceToSquared(a.object3D.position);
-				var distanceToB = float.object3D.position.distanceToSquared(b.object3D.position);
-				return distanceToA - distanceToB
-			});
-			if (options[0].id === 'color-green') ship.setAttribute('material', 'src', '#ship-src-green');
-			if (options[0].id === 'color-blue') ship.setAttribute('material', 'src', '#ship-src-blue');
-			if (options[0].id === 'color-red') ship.setAttribute('material', 'src', '#ship-src-red');
+		var button = document.querySelector('a-verlet-ui-input[type="button"]');
+		var spinner = document.getElementById('spinner');
+		button.addEventListener('click', function () {
+			spinner.emit('spin');
 		});
 	</script>
 </body>

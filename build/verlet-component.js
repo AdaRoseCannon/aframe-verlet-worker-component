@@ -47,20 +47,174 @@
 	'use strict';
 	/* eslint-env commonjs, browser, es6 */
 
-	__webpack_require__(27);
-	__webpack_require__(28);
-	__webpack_require__(29);
-	__webpack_require__(30);
+	__webpack_require__(1);
+	__webpack_require__(7);
+	__webpack_require__(8);
+	__webpack_require__(9);
 
 /***/ },
 /* 1 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = __webpack_require__(2);
+	'use strict';
+	/* eslint-env commonjs, browser, es6 */
+	/* global AFRAME */
 
+	/* TODO Keep track of unused workers in the event of the container being destroyed so that they can be reused later. */
+
+	var _regenerator = __webpack_require__(2);
+
+	var _regenerator2 = _interopRequireDefault(_regenerator);
+
+	var start = function () {
+		var _ref = _asyncToGenerator(_regenerator2.default.mark(function _callee(options) {
+			var v;
+			return _regenerator2.default.wrap(function _callee$(_context) {
+				while (1) {
+					switch (_context.prev = _context.next) {
+						case 0:
+							v = options.workerUrl ? new Verlet(options.workerUrl) : new Verlet();
+							_context.next = 3;
+							return v.init(options);
+
+						case 3:
+							return _context.abrupt('return', v);
+
+						case 4:
+						case 'end':
+							return _context.stop();
+					}
+				}
+			}, _callee, this);
+		}));
+
+		return function start(_x) {
+			return _ref.apply(this, arguments);
+		};
+	}();
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+	function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, arguments); return new Promise(function (resolve, reject) { function step(key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { return Promise.resolve(value).then(function (value) { step("next", value); }, function (err) { step("throw", err); }); } } return step("next"); }); }; }
+
+	var Verlet = __webpack_require__(6);
+
+	;
+
+	AFRAME.registerComponent('verlet-container', {
+		schema: {
+			gravity: {
+				default: -9.8
+			},
+			boxSize: {
+				default: 0
+			},
+			floor: {
+				default: -Infinity
+			},
+			workerUrl: {
+				default: ''
+			},
+			friction: {
+				default: 0.99
+			}
+		},
+		init: function init() {
+			var _this = this;
+
+			this.systemPromise = start(this.data).then(function (v) {
+				return _this.v = v;
+			});
+			this.systemPromise.then(function (v) {
+				return _this.el.emit('verlet-container-init-complete', v);
+			});
+			this.points = new Map();
+			this.updatePoints = this.updatePoints.bind(this);
+		},
+		update: function update() {
+			// TODO: Update verlet system without restarting worker
+		},
+		addPoint: function addPoint(component, data) {
+			var _this2 = this;
+
+			return this.systemPromise.then(function (v) {
+				return v.addPoint(data);
+			}).then(function (d) {
+				_this2.points.set(d.point.id, component);
+				return d.point.id;
+			});
+		},
+		removePoint: function removePoint(id) {
+			return this.systemPromise.then(function (v) {
+				return v.removePoint(id);
+			});
+		},
+		updatePoint: function updatePoint(id, data) {
+			var inData = { id: id };
+			Object.assign(inData, data);
+			return this.systemPromise.then(function (v) {
+				return v.updatePoint(inData);
+			});
+		},
+		connectPoints: function connectPoints(p1, p2, options) {
+
+			if (typeof options.restingDistance !== 'number' || options.restingDistance === NaN) console.warn('Invalid Contstraint', p1, p2, options);
+
+			if (!p1.components['verlet-point'].idPromise) p1.updateComponent('verlet-point');
+			if (!p2.components['verlet-point'].idPromise) p2.updateComponent('verlet-point');
+			return Promise.all([p1.components['verlet-point'].idPromise, p2.components['verlet-point'].idPromise, this.systemPromise]).then(function (arr) {
+				var id1 = arr[0];
+				var id2 = arr[1];
+				var v = arr[2];
+				return v.connectPoints(id1, id2, options);
+			});
+		},
+		removeConstraint: function removeConstraint(id) {
+			return this.systemPromise.then(function (v) {
+				return v.removeConstraint(id);
+			});
+		},
+		createForce: function createForce(options, targetIds) {
+			return this.systemPromise.then(function (v) {
+				return v.createForce(options, targetIds);
+			}).then(function (o) {
+				return o.forceId;
+			});
+		},
+		updateForce: function updateForce(id, options) {
+			return this.systemPromise.then(function (v) {
+				return v.updateForce(id, options);
+			});
+		},
+		tick: function tick() {
+			if (!this.v) return;
+			this.v.getPoints().then(this.updatePoints);
+			this.v.process();
+		},
+		updatePoints: function updatePoints(_ref2) {
+			var byteData = _ref2.byteData,
+			    length = _ref2.length;
+
+			for (var i = 0, l = length; i < l; i += 1) {
+				var point = byteData[i * 4 + 0] && this.points.get(byteData[i * 4 + 0]);
+				if (!point) continue;
+				var pX = byteData[i * 4 + 1];
+				var pY = byteData[i * 4 + 2];
+				var pZ = byteData[i * 4 + 3];
+				point.setPosition(pX, pY, pZ);
+			}
+		}
+	});
 
 /***/ },
 /* 2 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = __webpack_require__(3);
+
+
+/***/ },
+/* 3 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global) {// This method of obtaining a reference to the global object needs to be
@@ -81,7 +235,7 @@
 	// Force reevalutation of runtime.js.
 	g.regeneratorRuntime = undefined;
 
-	module.exports = __webpack_require__(3);
+	module.exports = __webpack_require__(4);
 
 	if (hadRuntime) {
 	  // Restore the original runtime.
@@ -98,7 +252,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },
-/* 3 */
+/* 4 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global, process) {/**
@@ -785,10 +939,10 @@
 	  typeof self === "object" ? self : this
 	);
 
-	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(4)))
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(5)))
 
 /***/ },
-/* 4 */
+/* 5 */
 /***/ function(module, exports) {
 
 	// shim for using process in browser
@@ -974,530 +1128,7 @@
 
 
 /***/ },
-/* 5 */,
-/* 6 */,
-/* 7 */,
-/* 8 */,
-/* 9 */,
-/* 10 */,
-/* 11 */,
-/* 12 */,
-/* 13 */,
-/* 14 */,
-/* 15 */,
-/* 16 */,
-/* 17 */,
-/* 18 */,
-/* 19 */,
-/* 20 */,
-/* 21 */,
-/* 22 */,
-/* 23 */,
-/* 24 */,
-/* 25 */,
-/* 26 */,
-/* 27 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-	/* eslint-env commonjs, browser, es6 */
-	/* global AFRAME */
-
-	/* TODO Keep track of unused workers in the event of the container being destroyed so that they can be reused later. */
-
-	var _regenerator = __webpack_require__(1);
-
-	var _regenerator2 = _interopRequireDefault(_regenerator);
-
-	var start = function () {
-		var _ref = _asyncToGenerator(_regenerator2.default.mark(function _callee(options) {
-			var v;
-			return _regenerator2.default.wrap(function _callee$(_context) {
-				while (1) {
-					switch (_context.prev = _context.next) {
-						case 0:
-							v = options.workerUrl ? new Verlet(options.workerUrl) : new Verlet();
-							_context.next = 3;
-							return v.init(options);
-
-						case 3:
-							return _context.abrupt('return', v);
-
-						case 4:
-						case 'end':
-							return _context.stop();
-					}
-				}
-			}, _callee, this);
-		}));
-
-		return function start(_x) {
-			return _ref.apply(this, arguments);
-		};
-	}();
-
-	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-	function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, arguments); return new Promise(function (resolve, reject) { function step(key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { return Promise.resolve(value).then(function (value) { step("next", value); }, function (err) { step("throw", err); }); } } return step("next"); }); }; }
-
-	var Verlet = __webpack_require__(31);
-
-	;
-
-	AFRAME.registerComponent('verlet-container', {
-		schema: {
-			gravity: {
-				default: -9.8
-			},
-			boxSize: {
-				default: 0
-			},
-			floor: {
-				default: -Infinity
-			},
-			workerUrl: {
-				default: ''
-			},
-			friction: {
-				default: 0.99
-			}
-		},
-		init: function init() {
-			var _this = this;
-
-			this.systemPromise = start(this.data).then(function (v) {
-				return _this.v = v;
-			});
-			this.systemPromise.then(function (v) {
-				return _this.el.emit('verlet-container-init-complete', v);
-			});
-			this.points = new Map();
-			this.updatePoints = this.updatePoints.bind(this);
-		},
-		update: function update() {
-			// TODO: Update verlet system without restarting worker
-		},
-		addPoint: function addPoint(component, data) {
-			var _this2 = this;
-
-			return this.systemPromise.then(function (v) {
-				return v.addPoint(data);
-			}).then(function (d) {
-				_this2.points.set(d.point.id, component);
-				return d.point.id;
-			});
-		},
-		removePoint: function removePoint(id) {
-			return this.systemPromise.then(function (v) {
-				return v.removePoint(id);
-			});
-		},
-		updatePoint: function updatePoint(id, data) {
-			var inData = { id: id };
-			Object.assign(inData, data);
-			return this.systemPromise.then(function (v) {
-				return v.updatePoint(inData);
-			});
-		},
-		connectPoints: function connectPoints(p1, p2, options) {
-			return this.systemPromise.then(function (v) {
-				return v.connectPoints(p1, p2, options);
-			});
-		},
-		removeConstraint: function removeConstraint(id) {
-			return this.systemPromise.then(function (v) {
-				return v.removeConstraint(id);
-			});
-		},
-		createForce: function createForce(options, targetIds) {
-			return this.systemPromise.then(function (v) {
-				return v.createForce(options, targetIds);
-			}).then(function (o) {
-				return o.forceId;
-			});
-		},
-		updateForce: function updateForce(id, options) {
-			return this.systemPromise.then(function (v) {
-				return v.updateForce(id, options);
-			});
-		},
-		tick: function tick() {
-			if (!this.v) return;
-			this.v.getPoints().then(this.updatePoints);
-			this.v.process();
-		},
-		updatePoints: function updatePoints(_ref2) {
-			var byteData = _ref2.byteData,
-			    length = _ref2.length;
-
-			for (var i = 0, l = length; i < l; i += 1) {
-				var point = byteData[i * 4 + 0] && this.points.get(byteData[i * 4 + 0]);
-				if (!point) continue;
-				var pX = byteData[i * 4 + 1];
-				var pY = byteData[i * 4 + 2];
-				var pZ = byteData[i * 4 + 3];
-				point.setPosition(pX, pY, pZ);
-			}
-		}
-	});
-
-/***/ },
-/* 28 */
-/***/ function(module, exports) {
-
-	'use strict';
-	/* eslint-env commonjs, browser, es6 */
-	/* global AFRAME */
-
-	function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
-
-	AFRAME.registerComponent('verlet-constraint', {
-		schema: {
-			stiffness: {
-				default: 0.05
-			},
-			from: {
-				type: 'selectorAll'
-			},
-			to: {
-				type: 'selectorAll'
-			},
-			distance: {
-
-				// ideal length of the constraint it will try to maintain this
-				default: 0
-			},
-			breakingDistance: {
-
-				// like range but won't will destroy itself after breaking
-				// Element will remain
-				default: ''
-			},
-			range: {
-				default: Infinity
-			}
-		},
-
-		init: function init() {
-			var el = this.el;
-			while (el && el.matches && !el.matches('[verlet-container], verlet-ui')) {
-				el = el.parentNode;
-			}if (el.components['verlet-container']) {
-				this.parentReadyPromise = Promise.resolve(el.components['verlet-container']);
-			} else {
-				this.parentReadyPromise = new Promise(function (r) {
-					return el.addEventListener('verlet-container-init-complete', function () {
-						return r(el.components['verlet-container']);
-					});
-				});
-			}
-			this.constraints = new Map();
-		},
-		update: function update() {
-			var _this = this;
-
-			// destroy everything then rebuild!
-			this.remove().then(function () {
-				_this.idPromises = _this.idPromises || [];
-				_this.data.restingDistance = _this.data.distance;
-				_this.data.breakingDistance = _this.data.breakingDistance ? Number(_this.data.breakingDistance) : undefined;
-				_this.parentReadyPromise.then(function (verletSystem) {
-					if (!_this.data.from || !_this.data.from.length) {
-						if (_this.el.matches('[verlet-point]')) {
-							_this.data.from = [_this.el];
-						} else {
-							_this.data.from = [];
-						}
-					}
-
-					if (!_this.data.to || !_this.data.to.length) {
-						if (_this.el.matches('[verlet-point]')) {
-							_this.data.to = [_this.el];
-						} else {
-							_this.data.to = [];
-						}
-					}
-
-					var _iteratorNormalCompletion = true;
-					var _didIteratorError = false;
-					var _iteratorError = undefined;
-
-					try {
-						for (var _iterator = _this.data.to[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-							var i = _step.value;
-							var _iteratorNormalCompletion2 = true;
-							var _didIteratorError2 = false;
-							var _iteratorError2 = undefined;
-
-							try {
-								for (var _iterator2 = _this.data.from[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-									var j = _step2.value;
-
-									if (i !== j) {
-										if (!i.components['verlet-point'].idPromise) i.updateComponent('verlet-point');
-										if (!j.components['verlet-point'].idPromise) j.updateComponent('verlet-point');
-										_this.idPromises.push(Promise.all([i.components['verlet-point'].idPromise, j.components['verlet-point'].idPromise]).then(function (arr) {
-											var id1 = arr[0];
-											var id2 = arr[1];
-											return verletSystem.connectPoints(id1, id2, {
-												stiffness: _this.data.stiffness,
-												restingDistance: _this.data.restingDistance,
-												range: _this.data.range,
-												breakingDistance: _this.data.breakingDistance
-											}).then(function (obj) {
-												return obj.constraintId;
-											});
-										}));
-									}
-								}
-							} catch (err) {
-								_didIteratorError2 = true;
-								_iteratorError2 = err;
-							} finally {
-								try {
-									if (!_iteratorNormalCompletion2 && _iterator2.return) {
-										_iterator2.return();
-									}
-								} finally {
-									if (_didIteratorError2) {
-										throw _iteratorError2;
-									}
-								}
-							}
-						}
-					} catch (err) {
-						_didIteratorError = true;
-						_iteratorError = err;
-					} finally {
-						try {
-							if (!_iteratorNormalCompletion && _iterator.return) {
-								_iterator.return();
-							}
-						} finally {
-							if (_didIteratorError) {
-								throw _iteratorError;
-							}
-						}
-					}
-				});
-			});
-		},
-		remove: function remove() {
-			if (this.idPromises) {
-				return Promise.all([this.parentReadyPromise].concat(_toConsumableArray(this.idPromises))).then(function (arrOfIDs) {
-					// remove every constraint
-					var v = arrOfIDs.shift();
-					return Promise.all(arrOfIDs.map(function (id) {
-						return v.removeConstraint(id);
-					}));
-				});
-			} else {
-				return Promise.resolve();
-			}
-		}
-	});
-
-	AFRAME.registerPrimitive('a-verlet-constraint', {
-		defaultComponents: {
-			'verlet-constraint': {}
-		},
-
-		mappings: {
-			to: 'verlet-constraint.to',
-			from: 'verlet-constraint.from',
-			stiffness: 'verlet-constraint.stiffness',
-			distance: 'verlet-constraint.distance',
-			range: 'verlet-constraint.range'
-		}
-	});
-
-/***/ },
-/* 29 */
-/***/ function(module, exports) {
-
-	'use strict';
-	/* eslint-env commonjs, browser, es6 */
-	/* global AFRAME */
-
-	AFRAME.registerComponent('verlet-force', {
-		schema: {
-			vector: {
-				type: 'vec3'
-			},
-			target: {
-				type: 'selectorAll'
-			}
-		},
-		init: function init() {
-			var el = this.el;
-			while (el && el.matches && !el.matches('[verlet-container], verlet-ui')) {
-				el = el.parentNode;
-			}if (el.components['verlet-container']) {
-				this.parentReadyPromise = Promise.resolve(el.components['verlet-container']);
-			} else {
-				this.parentReadyPromise = new Promise(function (r) {
-					return el.addEventListener('verlet-container-init-complete', function () {
-						return r(el.components['verlet-container']);
-					});
-				});
-			}
-			this.hasRequestedCreation = false;
-		},
-		update: function update() {
-			var _this = this;
-
-			var promise = this.parentReadyPromise.then(function (c) {
-				_this.data.target = _this.attrValue.target ? _this.data.target : [_this.el];
-
-				if (_this.hasRequestedCreation === false) {
-					_this.hasRequestedCreation = true;
-					var targetPromises = _this.data.target.map(function (t) {
-						if (t.components['verlet-container']) return Promise.resolve('world');
-
-						if (!t.components['verlet-point']) throw Error('Target is not a verlet-point or verlet-container');
-						if (!t.components['verlet-point'].idPromise) t.updateComponent('verlet-point');
-						return t.components['verlet-point'].idPromise;
-					});
-
-					return Promise.all(targetPromises).then(function (targetIds) {
-						return c.createForce({ vector: _this.data.vector }, targetIds);
-					});
-				} else {
-
-					return _this.idPromise.then(function (id) {
-						return c.updateForce(id, {
-							vector: _this.data.vector
-						});
-					});
-				}
-			});
-
-			if (!this.idPromise) this.idPromise = promise;
-			return this.idPromise;
-		},
-		remove: function remove() {
-			// mark to be expired worker will clean it up
-		}
-	});
-
-/***/ },
-/* 30 */
-/***/ function(module, exports) {
-
-	'use strict';
-	/* eslint-env commonjs, browser, es6 */
-	/* global AFRAME */
-
-	AFRAME.registerComponent('verlet-point', {
-		schema: {
-			position: {
-				type: 'vec3'
-			},
-			velocity: {
-				type: 'vec3'
-			},
-			mass: {
-				default: 1
-			},
-			radius: {
-				default: 0
-			},
-			attraction: {
-				default: 0
-			},
-			attractionRange: {
-				default: 'contact'
-			},
-			syncPosition: {
-				default: false
-			}
-		},
-		init: function init() {
-			var _this = this;
-
-			var el = this.el;
-			while (el && el.matches && !el.matches('[verlet-container], verlet-ui')) {
-				el = el.parentNode;
-			}if (el.components['verlet-container']) {
-				this.parentReadyPromise = Promise.resolve(el.components['verlet-container']);
-			} else {
-				this.parentReadyPromise = new Promise(function (r) {
-					return el.addEventListener('verlet-container-init-complete', function () {
-						return r(el.components['verlet-container']);
-					});
-				});
-			}
-			this.parentReadyPromise.then(function (c) {
-				_this.parentVerletComponent = c;
-			});
-			this.el.updateComponent('position');
-			this.hasRequestedPoint = false;
-			this.parentVerletElement = el;
-		},
-
-
-		// for processing data recieved from container
-		setPosition: function setPosition(x, y, z) {
-
-			// We are updating the data in the simulation so ignore return results
-			if (this.data.syncPosition) return;
-
-			this.el.object3D.position.x = x;
-			this.el.object3D.position.y = y;
-			this.el.object3D.position.z = z;
-		},
-		update: function update() {
-			var _this2 = this;
-
-			if (this.data.syncPosition && this.data.mass !== 0) {
-				throw Error('Can only sync position if the mass is 0');
-			}
-			var promise = this.parentReadyPromise.then(function (c) {
-
-				_this2.data.position = _this2.attrValue.position ? _this2.data.position : _this2.parentVerletElement.object3D.worldToLocal(_this2.el.object3D.getWorldPosition());
-				if (!_this2.hasRequestedPoint) {
-					_this2.hasRequestedPoint = true;
-					return c.addPoint(_this2, _this2.data).then(function (id) {
-						return _this2.id = id;
-					});
-				} else {
-					return _this2.idPromise.then(function (id) {
-						c.updatePoint(id, _this2.data);
-						return id;
-					});
-				}
-			});
-			if (!this.idPromise) this.idPromise = promise;
-			return this.idPromise;
-		},
-		tick: function tick() {
-			if (this.data.syncPosition && this.parentVerletComponent && this.id) {
-				if (!this.worldPosition) {
-					this.worldPosition = new AFRAME.THREE.Vector3();
-				}
-				this.parentVerletComponent.updatePoint(this.id, {
-					position: this.parentVerletElement.object3D.worldToLocal(this.el.object3D.getWorldPosition(this.worldPosition))
-				});
-			}
-		},
-		remove: function remove() {
-			var _this3 = this;
-
-			this.id = undefined;
-			return this.parentReadyPromise.then(function (c) {
-				if (_this3.idPromise) {
-					return _this3.idPromise.then(function (id) {
-						return c.removePoint(id);
-					});
-				} else {
-					return Promise.resolve();
-				}
-			});
-		}
-	});
-
-/***/ },
-/* 31 */
+/* 6 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -1799,6 +1430,353 @@
 	}();
 
 	module.exports = Verlet;
+
+/***/ },
+/* 7 */
+/***/ function(module, exports) {
+
+	'use strict';
+	/* eslint-env commonjs, browser, es6 */
+	/* global AFRAME */
+
+	function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
+
+	AFRAME.registerComponent('verlet-constraint', {
+		schema: {
+			stiffness: {
+				default: 0.05
+			},
+			from: {
+				type: 'selectorAll'
+			},
+			to: {
+				type: 'selectorAll'
+			},
+			distance: {
+
+				// ideal length of the constraint it will try to maintain this
+				default: 0
+			},
+			breakingDistance: {
+
+				// like range but won't will destroy itself after breaking
+				// Element will remain
+				default: ''
+			},
+			range: {
+				default: Infinity
+			}
+		},
+
+		init: function init() {
+			var el = this.el;
+			while (el && el.matches && !el.matches('[verlet-container], verlet-ui')) {
+				el = el.parentNode;
+			}if (el.components['verlet-container']) {
+				this.parentReadyPromise = Promise.resolve(el.components['verlet-container']);
+			} else {
+				this.parentReadyPromise = new Promise(function (r) {
+					return el.addEventListener('verlet-container-init-complete', function () {
+						return r(el.components['verlet-container']);
+					});
+				});
+			}
+			this.constraints = new Map();
+		},
+		update: function update() {
+			var _this = this;
+
+			// destroy everything then rebuild!
+			this.remove().then(function () {
+				_this.idPromises = _this.idPromises || [];
+				_this.data.breakingDistance = _this.data.breakingDistance ? Number(_this.data.breakingDistance) : undefined;
+				_this.parentReadyPromise.then(function (verletSystem) {
+					if (!_this.data.from || !_this.data.from.length) {
+						if (_this.el.matches('[verlet-point]')) {
+							_this.data.from = [_this.el];
+						} else {
+							_this.data.from = [];
+						}
+					}
+
+					if (!_this.data.to || !_this.data.to.length) {
+						if (_this.el.matches('[verlet-point]')) {
+							_this.data.to = [_this.el];
+						} else {
+							_this.data.to = [];
+						}
+					}
+
+					var _iteratorNormalCompletion = true;
+					var _didIteratorError = false;
+					var _iteratorError = undefined;
+
+					try {
+						for (var _iterator = _this.data.to[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+							var i = _step.value;
+							var _iteratorNormalCompletion2 = true;
+							var _didIteratorError2 = false;
+							var _iteratorError2 = undefined;
+
+							try {
+								for (var _iterator2 = _this.data.from[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+									var j = _step2.value;
+
+									if (i !== j) {
+										_this.idPromises.push(verletSystem.connectPoints(i, j, {
+											stiffness: _this.data.stiffness,
+											restingDistance: _this.data.distance,
+											range: _this.data.range,
+											breakingDistance: _this.data.breakingDistance
+										}).then(function (obj) {
+											return obj.constraintId;
+										}));
+									}
+								}
+							} catch (err) {
+								_didIteratorError2 = true;
+								_iteratorError2 = err;
+							} finally {
+								try {
+									if (!_iteratorNormalCompletion2 && _iterator2.return) {
+										_iterator2.return();
+									}
+								} finally {
+									if (_didIteratorError2) {
+										throw _iteratorError2;
+									}
+								}
+							}
+						}
+					} catch (err) {
+						_didIteratorError = true;
+						_iteratorError = err;
+					} finally {
+						try {
+							if (!_iteratorNormalCompletion && _iterator.return) {
+								_iterator.return();
+							}
+						} finally {
+							if (_didIteratorError) {
+								throw _iteratorError;
+							}
+						}
+					}
+				});
+			});
+		},
+		remove: function remove() {
+			if (this.idPromises) {
+				return Promise.all([this.parentReadyPromise].concat(_toConsumableArray(this.idPromises))).then(function (arrOfIDs) {
+					// remove every constraint
+					var v = arrOfIDs.shift();
+					return Promise.all(arrOfIDs.map(function (id) {
+						return v.removeConstraint(id);
+					}));
+				});
+			} else {
+				return Promise.resolve();
+			}
+		}
+	});
+
+	AFRAME.registerPrimitive('a-verlet-constraint', {
+		defaultComponents: {
+			'verlet-constraint': {}
+		},
+
+		mappings: {
+			to: 'verlet-constraint.to',
+			from: 'verlet-constraint.from',
+			stiffness: 'verlet-constraint.stiffness',
+			distance: 'verlet-constraint.distance',
+			range: 'verlet-constraint.range'
+		}
+	});
+
+/***/ },
+/* 8 */
+/***/ function(module, exports) {
+
+	'use strict';
+	/* eslint-env commonjs, browser, es6 */
+	/* global AFRAME */
+
+	AFRAME.registerComponent('verlet-force', {
+		schema: {
+			vector: {
+				type: 'vec3'
+			},
+			target: {
+				type: 'selectorAll'
+			}
+		},
+		init: function init() {
+			var el = this.el;
+			while (el && el.matches && !el.matches('[verlet-container], verlet-ui')) {
+				el = el.parentNode;
+			}if (el.components['verlet-container']) {
+				this.parentReadyPromise = Promise.resolve(el.components['verlet-container']);
+			} else {
+				this.parentReadyPromise = new Promise(function (r) {
+					return el.addEventListener('verlet-container-init-complete', function () {
+						return r(el.components['verlet-container']);
+					});
+				});
+			}
+			this.hasRequestedCreation = false;
+		},
+		update: function update() {
+			var _this = this;
+
+			var promise = this.parentReadyPromise.then(function (c) {
+				_this.data.target = _this.attrValue.target ? _this.data.target : [_this.el];
+
+				if (_this.hasRequestedCreation === false) {
+					_this.hasRequestedCreation = true;
+					var targetPromises = _this.data.target.map(function (t) {
+						if (t.components['verlet-container']) return Promise.resolve('world');
+
+						if (!t.components['verlet-point']) throw Error('Target is not a verlet-point or verlet-container');
+						if (!t.components['verlet-point'].idPromise) t.updateComponent('verlet-point');
+						return t.components['verlet-point'].idPromise;
+					});
+
+					return Promise.all(targetPromises).then(function (targetIds) {
+						return c.createForce({ vector: _this.data.vector }, targetIds);
+					});
+				} else {
+
+					return _this.idPromise.then(function (id) {
+						return c.updateForce(id, {
+							vector: _this.data.vector
+						});
+					});
+				}
+			});
+
+			if (!this.idPromise) this.idPromise = promise;
+			return this.idPromise;
+		},
+		remove: function remove() {
+			// mark to be expired worker will clean it up
+		}
+	});
+
+/***/ },
+/* 9 */
+/***/ function(module, exports) {
+
+	'use strict';
+	/* eslint-env commonjs, browser, es6 */
+	/* global AFRAME */
+
+	AFRAME.registerComponent('verlet-point', {
+		schema: {
+			position: {
+				type: 'vec3'
+			},
+			velocity: {
+				type: 'vec3'
+			},
+			mass: {
+				default: 1
+			},
+			radius: {
+				default: 0
+			},
+			attraction: {
+				default: 0
+			},
+			attractionRange: {
+				default: 'contact'
+			},
+			syncPosition: {
+				default: false
+			}
+		},
+		init: function init() {
+			var _this = this;
+
+			var el = this.el;
+			while (el && el.matches && !el.matches('[verlet-container], verlet-ui')) {
+				el = el.parentNode;
+			}if (el.components['verlet-container']) {
+				this.parentReadyPromise = Promise.resolve(el.components['verlet-container']);
+			} else {
+				this.parentReadyPromise = new Promise(function (r) {
+					return el.addEventListener('verlet-container-init-complete', function () {
+						return r(el.components['verlet-container']);
+					});
+				});
+			}
+			this.parentReadyPromise.then(function (c) {
+				_this.parentVerletComponent = c;
+			});
+			this.el.updateComponent('position');
+			this.hasRequestedPoint = false;
+			this.parentVerletElement = el;
+		},
+
+
+		// for processing data recieved from container
+		setPosition: function setPosition(x, y, z) {
+
+			// We are updating the data in the simulation so ignore return results
+			if (this.data.syncPosition) return;
+
+			this.el.object3D.position.x = x;
+			this.el.object3D.position.y = y;
+			this.el.object3D.position.z = z;
+		},
+		update: function update() {
+			var _this2 = this;
+
+			if (this.data.syncPosition && this.data.mass !== 0) {
+				throw Error('Can only sync position if the mass is 0');
+			}
+			var promise = this.parentReadyPromise.then(function (c) {
+				_this2.data.position = _this2.attrValue.position ? _this2.data.position : _this2.parentVerletElement.object3D.worldToLocal(_this2.el.object3D.getWorldPosition());
+				if (!_this2.hasRequestedPoint) {
+					_this2.hasRequestedPoint = true;
+					return c.addPoint(_this2, _this2.data).then(function (id) {
+						return _this2.id = id;
+					});
+				} else {
+					return _this2.idPromise.then(function (id) {
+						c.updatePoint(id, _this2.data);
+						return id;
+					});
+				}
+			});
+			if (!this.idPromise) this.idPromise = promise;
+			return this.idPromise;
+		},
+		tick: function tick() {
+			if (this.data.syncPosition && this.parentVerletComponent && this.id) {
+				if (!this.worldPosition) {
+					this.worldPosition = new AFRAME.THREE.Vector3();
+				}
+				this.parentVerletComponent.updatePoint(this.id, {
+					position: this.parentVerletElement.object3D.worldToLocal(this.el.object3D.getWorldPosition(this.worldPosition))
+				});
+			}
+		},
+		remove: function remove() {
+			var _this3 = this;
+
+			this.id = undefined;
+			return this.parentReadyPromise.then(function (c) {
+				if (_this3.idPromise) {
+					return _this3.idPromise.then(function (id) {
+						return c.removePoint(id);
+					});
+				} else {
+					return Promise.resolve();
+				}
+			});
+		}
+	});
 
 /***/ }
 /******/ ]);

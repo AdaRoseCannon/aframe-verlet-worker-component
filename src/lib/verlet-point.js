@@ -58,7 +58,6 @@ AFRAME.registerComponent('verlet-point', {
 			throw Error('Can only sync position if the mass is 0');
 		}
 		const promise = this.parentReadyPromise.then(c => {
-
 			this.data.position = this.attrValue.position ? this.data.position : this.parentVerletElement.object3D.worldToLocal(this.el.object3D.getWorldPosition());
 			if (!this.hasRequestedPoint) {
 				this.hasRequestedPoint = true;

@@ -5,6 +5,7 @@ module.exports = {
 	entry: {
 		'verlet-worker': './src/verlet-worker.js',
 		'verlet-component': './src/verlet-component.js',
+		'verlet-ui': './src/verlet-ui.js'
 	},
 	output: {
 		path: './build/',

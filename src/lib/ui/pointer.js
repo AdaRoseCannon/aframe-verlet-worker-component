@@ -1,7 +1,9 @@
 'use strict';
 /* global AFRAME */
 /* eslint no-var: 0 */
-/* eslint-env browser */
+/* eslint-env browser, node */
+
+var verletUITemplate = require('./verlet-ui').template;
 
 function squaredDistanceBetween(el1, el2) {
 
@@ -25,35 +27,12 @@ function squaredDistanceBetween(el1, el2) {
 	return dSquared;
 }
 
-AFRAME.registerPrimitive('verlet-ui', {
-	defaultComponents: {
-		'grabber-tracking': {},
-		'verlet-container': {
-			gravity: 0,
-			friction: 0.8
-		}
-	},
-
-	mappings: {
-		manipulator: 'grabber-tracking.manipulator',
-		pointer: 'grabber-tracking.pointer'
+AFRAME.registerComponent('verlet-ui-pointer', AFRAME.utils.extend({
+	setup: function () {
+		var manipulatorSelector = this.parent.getDOMAttribute('grabber-tracking').manipulator;
+		this.el.setAttribute('verlet-constraint', 'stiffness: 0.05; to: ' + manipulatorSelector + ';');
 	}
-});
-
-var noop = function () { };
-var verletUITemplate = {
-	update: function () {
-		if (this.tick === noop) this.tick = this.__tick;
-	},
-	tick: function () {
-		let el = this.el;
-		while (el && el.matches && !el.matches('[grabber-tracking], verlet-ui')) el = el.parentNode;
-		this.parent = el;
-		this.__tick = this.tick;
-		this.tick = noop;
-		this.setup();
-	}
-};
+}, verletUITemplate));
 
 AFRAME.registerComponent('verlet-ui-default-pointer', {
 	init: function () {
@@ -96,6 +75,7 @@ AFRAME.registerComponent('verlet-ui-default-pointer', {
 	}
 });
 
+// Tracks cursor position, used for interacting with the UI in the scene
 AFRAME.registerComponent('grabber-tracking', {
 	schema: {
 		manipulator: {
@@ -197,68 +177,24 @@ AFRAME.registerComponent('grabber-tracking', {
 	}
 });
 
+// To mark something grabable by the pointer
+// also adds a verlet-constraint to make it jump to it.
 AFRAME.registerComponent('verlet-ui-grabable', AFRAME.utils.extend({
+	schema: {
+		range: {
+			default: 0.8
+		},
+		radius: {
+			default: 0
+		}
+	},
 	setup: function () {
+		var pointerSelector = this.parent.getDOMAttribute('grabber-tracking').pointer;
+		this.el.setAttribute('verlet-constraint', 'stiffness:0.2; range: ' + this.data.range + '; distance: ' + this.data.radius + '; to: ' + pointerSelector + ';');
 		this.parent.components['grabber-tracking'].registerActionable(this.el);
 	},
 	remove() {
 		this.parent.components['grabber-tracking'].unRegisterActionable(this.el);
-	}
-}, verletUITemplate));
-
-AFRAME.registerComponent('verlet-ui-pointer', AFRAME.utils.extend({
-	setup: function () {
-		this.el.setAttribute('verlet-point', 'mass:0.1;');
-		this.el.setAttribute('verlet-constraint', 'stiffness: 0.05; to: ' + this.parent.getDOMAttribute('grabber-tracking').manipulator);
-	}
-}, verletUITemplate));
-
-AFRAME.registerPrimitive('verlet-ui-pointer', {
-	defaultComponents: {
-		'verlet-ui-pointer': {}
-	}
-});
-
-AFRAME.registerComponent('verlet-ui-input', AFRAME.utils.extend({
-	schema: {
-		type: {
-
-			// One of 'radio',
-			type: 'string'
-		}
-	},
-	setup: function () {
-		if (this.data.type === 'radio') {
-			console.log('Setting up the radio buttons');
-		}
-	},
-	remove: function () {
 
 	}
 }, verletUITemplate));
-
-AFRAME.registerPrimitive('a-verlet-ui-input', {
-	defaultComponents: {
-		'verlet-ui-input': {}
-	},
-	mappings: {
-		type: 'verlet-ui-input.type'
-	}
-});
-
-AFRAME.registerPrimitive('a-verlet-ui-option', {
-	defaultComponents: {
-		'geometry': {
-			primitive: 'sphere',
-			radius: '0.2'
-		},
-		material: {
-			shader: 'standard'
-		}
-	},
-	mappings: {
-		type: 'verlet-ui-input.type',
-		radius: 'geometry.radius',
-		color: 'material.color'
-	}
-});
