@@ -26,6 +26,7 @@ AFRAME.registerComponent('verlet-point', {
 			default: false
 		}
 	},
+
 	init() {
 		let el = this.el;
 		while (el && el.matches && !el.matches('[verlet-container], verlet-ui')) el = el.parentNode;
@@ -37,7 +38,6 @@ AFRAME.registerComponent('verlet-point', {
 		this.parentReadyPromise.then(c => {
 			this.parentVerletComponent = c;
 		});
-		this.el.updateComponent('position');
 		this.hasRequestedPoint = false;
 		this.parentVerletElement = el;
 	},

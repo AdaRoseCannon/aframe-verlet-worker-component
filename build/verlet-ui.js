@@ -455,6 +455,8 @@
 			}
 
 			// Attach event listeners.
+			canvas.addEventListener('touchstart', this.dragStart.bind(this));
+			canvas.addEventListener('touchend', this.dragEnd.bind(this));
 			canvas.addEventListener('mousedown', this.dragStart.bind(this));
 			canvas.addEventListener('mouseup', this.dragEnd.bind(this));
 			canvas.addEventListener('click', this.handleClick.bind(this));

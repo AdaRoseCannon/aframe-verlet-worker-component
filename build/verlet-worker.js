@@ -58,8 +58,6 @@
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-	importScripts('https://cdn.polyfill.io/v2/polyfill.js?features=es6');
-
 	var idIncrementer = 100;
 	var World3D = __webpack_require__(17);
 	var Constraint3D = __webpack_require__(30);

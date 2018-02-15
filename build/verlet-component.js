@@ -1695,6 +1695,7 @@
 				default: false
 			}
 		},
+
 		init: function init() {
 			var _this = this;
 
@@ -1713,7 +1714,6 @@
 			this.parentReadyPromise.then(function (c) {
 				_this.parentVerletComponent = c;
 			});
-			this.el.updateComponent('position');
 			this.hasRequestedPoint = false;
 			this.parentVerletElement = el;
 		},
