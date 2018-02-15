@@ -9,6 +9,12 @@ Usage add the script tag to the head of your document after the A-Frame script, 
 <script src="https://rawgit.com/AdaRoseEdwards/aframe-verlet-worker-component/master/build/verlet-component.js"></script>
 ```
 
+# Demos
+
+https://ada.is/aframe-verlet-worker-component/demos/luftballons.html
+https://ada.is/aframe-verlet-worker-component/demos/simple.html
+https://ada.is/aframe-verlet-worker-component/demos/ui-primitives.html
+
 # Contributing
 
 Open to new issues and pull requests.
